@@ -1,0 +1,11 @@
+C:\Users\Tai\Desktop\PRM392\SharedKernel\bin\Debug\net8.0\SharedKernel.deps.json
+C:\Users\Tai\Desktop\PRM392\SharedKernel\bin\Debug\net8.0\SharedKernel.dll
+C:\Users\Tai\Desktop\PRM392\SharedKernel\bin\Debug\net8.0\SharedKernel.pdb
+C:\Users\Tai\Desktop\PRM392\SharedKernel\obj\Debug\net8.0\SharedKernel.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Tai\Desktop\PRM392\SharedKernel\obj\Debug\net8.0\SharedKernel.AssemblyInfoInputs.cache
+C:\Users\Tai\Desktop\PRM392\SharedKernel\obj\Debug\net8.0\SharedKernel.AssemblyInfo.cs
+C:\Users\Tai\Desktop\PRM392\SharedKernel\obj\Debug\net8.0\SharedKernel.csproj.CoreCompileInputs.cache
+C:\Users\Tai\Desktop\PRM392\SharedKernel\obj\Debug\net8.0\SharedKernel.dll
+C:\Users\Tai\Desktop\PRM392\SharedKernel\obj\Debug\net8.0\refint\SharedKernel.dll
+C:\Users\Tai\Desktop\PRM392\SharedKernel\obj\Debug\net8.0\SharedKernel.pdb
+C:\Users\Tai\Desktop\PRM392\SharedKernel\obj\Debug\net8.0\ref\SharedKernel.dll

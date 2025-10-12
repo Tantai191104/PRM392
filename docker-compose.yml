@@ -1,0 +1,97 @@
+version: "3.8"
+
+services:
+  # =============================
+  # 🧩 MongoDB
+  # =============================
+  mongo:
+    image: mongo:6.0
+    container_name: prm392_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - prm392_network
+
+  # =============================
+  # 🔐 Auth Service
+  # =============================
+  authservice:
+    build:
+      context: .
+      dockerfile: AuthService/Dockerfile
+    image: prm392_authservice:latest
+    container_name: prm392_authservice
+    depends_on:
+      - mongo
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5133
+      - MongoSettings__ConnectionString=mongodb://mongo:27017
+      - MongoSettings__DatabaseName=PRM392AuthDB
+      - JwtSettings__SecretKey=YOUR_VERY_LONG_SECRET_KEY_HERE
+      - JwtSettings__Issuer=PRM392AuthService
+      - JwtSettings__Audience=PRM392Clients
+    ports:
+      - "5133:5133"
+    networks:
+      - prm392_network
+
+  # =============================
+  # 📦 Product Service
+  # =============================
+  productservice:
+    build:
+      context: .
+      dockerfile: ProductService/Dockerfile
+    image: prm392_productservice:latest
+    container_name: prm392_productservice
+    depends_on:
+      - mongo
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5137
+      - MongoSettings__ConnectionString=mongodb://mongo:27017
+      - MongoSettings__DatabaseName=PRM392ProductDB
+      - JwtSettings__SecretKey=YOUR_VERY_LONG_SECRET_KEY_HERE
+      - JwtSettings__Issuer=PRM392AuthService
+      - JwtSettings__Audience=PRM392Clients
+    ports:
+      - "5137:5137"
+    networks:
+      - prm392_network
+
+  # =============================
+  # 🚪 API Gateway (YARP)
+  # =============================
+  apigateway:
+    build:
+      context: .
+      dockerfile: APIGateway/Dockerfile
+    image: prm392_apigateway:latest
+    container_name: prm392_apigateway
+    depends_on:
+      - authservice
+      - productservice
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5016
+      - JwtSettings__SecretKey=YOUR_VERY_LONG_SECRET_KEY_HERE
+      - JwtSettings__Issuer=PRM392AuthService
+      - JwtSettings__Audience=PRM392Clients
+    ports:
+      - "5016:5016"
+    networks:
+      - prm392_network
+
+# =============================
+# 💾 Volumes & Networks
+# =============================
+volumes:
+  mongo_data:
+
+networks:
+  prm392_network:
+    driver: bridge
