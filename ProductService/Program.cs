@@ -32,9 +32,10 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5016") // Gateway
+        policy.WithOrigins("http://localhost:5016", "http://127.0.0.1:5016") // Gateway
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -52,4 +53,6 @@ app.UseSwaggerUI(c =>
 
 // app.UseHttpsRedirection(); // ❌ Bỏ khi chạy Docker
 app.MapControllers();
+// Health endpoint for orchestration / load balancers
+app.MapGet("/health", () => Results.Json(new { status = "ok", service = "ProductService" }));
 app.Run();

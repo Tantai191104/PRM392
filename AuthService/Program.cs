@@ -83,9 +83,10 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5016") // Gateway UI
+        policy.WithOrigins("http://localhost:5016", "http://127.0.0.1:5016") // Gateway UI
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -105,4 +106,6 @@ app.UseSwaggerUI(c =>
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+// Health endpoint for orchestration / load balancers
+app.MapGet("/health", () => Results.Json(new { status = "ok", service = "AuthService" }));
 app.Run();
