@@ -31,7 +31,7 @@ services:
       - ASPNETCORE_URLS=http://+:5133
       - MongoSettings__ConnectionString=mongodb://mongo:27017
       - MongoSettings__DatabaseName=PRM392AuthDB
-      - JwtSettings__SecretKey=YOUR_VERY_LONG_SECRET_KEY_HERE
+      - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
       - JwtSettings__Issuer=PRM392AuthService
       - JwtSettings__Audience=PRM392Clients
     ports:
@@ -55,7 +55,7 @@ services:
       - ASPNETCORE_URLS=http://+:5137
       - MongoSettings__ConnectionString=mongodb://mongo:27017
       - MongoSettings__DatabaseName=PRM392ProductDB
-      - JwtSettings__SecretKey=YOUR_VERY_LONG_SECRET_KEY_HERE
+      - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
       - JwtSettings__Issuer=PRM392AuthService
       - JwtSettings__Audience=PRM392Clients
     ports:
@@ -78,9 +78,15 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5016
-      - JwtSettings__SecretKey=YOUR_VERY_LONG_SECRET_KEY_HERE
+      - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
       - JwtSettings__Issuer=PRM392AuthService
       - JwtSettings__Audience=PRM392Clients
+      # Downstream swagger base URLs (can be overridden in production env or docker-compose.override.yml)
+      - DOWNSTREAMSWAGGER_AUTH=http://authservice:5133
+      - DOWNSTREAMSWAGGER_PRODUCTS=http://productservice:5137
+      # Gateway header forwarding options
+      - APIGATEWAY_FORWARDALLHEADERS=false
+      - APIGATEWAY_FORWARDAUTH=true
     ports:
       - "5016:5016"
     networks:

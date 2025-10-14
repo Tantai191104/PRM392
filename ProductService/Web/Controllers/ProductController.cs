@@ -6,7 +6,7 @@ using ProductService.Domain.Entities;
 namespace ProductService.Web.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/products")]
     public class ProductController : ControllerBase
     {
         private readonly ProductAppService _service;

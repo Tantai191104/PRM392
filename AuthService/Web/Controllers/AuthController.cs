@@ -5,7 +5,7 @@ using AuthService.Application.DTOs;
 namespace AuthService.Web.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/auth")]
     public class AuthController : ControllerBase
     {
         private readonly AuthAppService _authService;
