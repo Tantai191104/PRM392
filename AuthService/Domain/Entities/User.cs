@@ -25,5 +25,8 @@ namespace AuthService.Domain.Entities
 
         [BsonElement("refreshTokenExpiryTime")]
         public DateTime? RefreshTokenExpiryTime { get; set; }
+
+        [BsonElement("isActive")]
+        public bool IsActive { get; set; } = true;
     }
 }

@@ -1,0 +1,68 @@
+### Health check
+GET http://localhost:5139/health
+
+### Simple health check
+GET http://localhost:5139/health/simple
+
+### Get all orders (requires authentication)
+GET http://localhost:5139/api/orders
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### Get order by ID (requires authentication)
+GET http://localhost:5139/api/orders/60d5f48b8f1a2c001f8e4b8a
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### Get orders by user ID (requires authentication)
+GET http://localhost:5139/api/orders/user/1
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### Create a new order (requires authentication)
+POST http://localhost:5139/api/orders
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+{
+  "userId": 1,
+  "productId": 1,
+  "quantity": 2
+}
+
+### Create order with validation errors (should fail)
+POST http://localhost:5139/api/orders
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+{
+  "userId": 0,
+  "productId": -1,
+  "quantity": 101
+}
+
+### ===============================================
+### Through Gateway - Get all orders
+GET http://localhost:5016/api/orders
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### Through Gateway - Create a new order
+POST http://localhost:5016/api/orders
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+{
+  "userId": 1,
+  "productId": 1,
+  "quantity": 3
+}
+
+### Through Gateway - Health check
+GET http://localhost:5016/api/orders/health
+
+### ===============================================
+### Sample JWT Token (for testing - replace with real token from AuthService)
+# POST http://localhost:5133/api/auth/login
+# Content-Type: application/json
+# 
+# {
+#   "email": "user@example.com",
+#   "password": "password123"
+# }

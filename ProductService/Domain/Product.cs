@@ -13,7 +13,7 @@ namespace ProductService.Domain.Entities
 
         public decimal Price { get; set; }            // giá bán
 
-        public Dictionary<string, object> Attributes { get; set; } = new();
+    public Dictionary<string, object?> Attributes { get; set; } = new();
         // lưu các thuộc tính động: dung lượng, tình trạng, năm sản xuất,…
         public string OwnerId { get; set; } = null!;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

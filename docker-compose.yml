@@ -64,7 +64,37 @@ services:
       - prm392_network
 
   # =============================
-  # 🚪 API Gateway (YARP)
+  # 📦 Order Service
+  # =============================
+  orderservice:
+    build:
+      context: .
+      dockerfile: OrderService/Dockerfile
+    image: prm392_orderservice:latest
+    container_name: prm392_orderservice
+    depends_on:
+      - mongo
+      - authservice
+      - productservice
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5139
+      - MongoSettings__ConnectionString=mongodb://mongo:27017
+      - MongoSettings__DatabaseName=PRM392OrderDB
+      - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
+      - JwtSettings__Issuer=PRM392AuthService
+      - JwtSettings__Audience=PRM392Clients
+      - ExternalServices__AuthService__BaseUrl=http://authservice:5133
+      - ExternalServices__ProductService__BaseUrl=http://productservice:5137
+    ports:
+      - "5139:5139"
+    volumes:
+      - ./logs/orderservice:/app/logs
+    networks:
+      - prm392_network
+
+  # =============================
+  # �🚪 API Gateway (YARP)
   # =============================
   apigateway:
     build:
@@ -75,6 +105,7 @@ services:
     depends_on:
       - authservice
       - productservice
+      - orderservice
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5016
@@ -84,6 +115,7 @@ services:
       # Downstream swagger base URLs (can be overridden in production env or docker-compose.override.yml)
       - DOWNSTREAMSWAGGER_AUTH=http://authservice:5133
       - DOWNSTREAMSWAGGER_PRODUCTS=http://productservice:5137
+      - DOWNSTREAMSWAGGER_ORDERS=http://orderservice:5139
       # Gateway header forwarding options
       - APIGATEWAY_FORWARDALLHEADERS=false
       - APIGATEWAY_FORWARDAUTH=true

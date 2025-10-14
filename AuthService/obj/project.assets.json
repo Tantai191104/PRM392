@@ -1560,19 +1560,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\HP\\.nuget\\packages\\": {}
+    "C:\\Users\\Tai\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\HP\\Desktop\\PRM392\\AuthService\\AuthService.csproj",
+      "projectUniqueName": "C:\\Users\\Tai\\Desktop\\PRM392\\AuthService\\AuthService.csproj",
       "projectName": "AuthService",
-      "projectPath": "C:\\Users\\HP\\Desktop\\PRM392\\AuthService\\AuthService.csproj",
-      "packagesPath": "C:\\Users\\HP\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\HP\\Desktop\\PRM392\\AuthService\\obj\\",
+      "projectPath": "C:\\Users\\Tai\\Desktop\\PRM392\\AuthService\\AuthService.csproj",
+      "packagesPath": "C:\\Users\\Tai\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Tai\\Desktop\\PRM392\\AuthService\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\HP\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\Tai\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
@@ -1584,8 +1584,8 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "C:\\Users\\HP\\Desktop\\PRM392\\SharedKernel\\SharedKernel.csproj": {
-              "projectPath": "C:\\Users\\HP\\Desktop\\PRM392\\SharedKernel\\SharedKernel.csproj"
+            "C:\\Users\\Tai\\Desktop\\PRM392\\SharedKernel\\SharedKernel.csproj": {
+              "projectPath": "C:\\Users\\Tai\\Desktop\\PRM392\\SharedKernel\\SharedKernel.csproj"
             }
           }
         }
@@ -1599,8 +1599,7 @@
         "enableAudit": "true",
         "auditLevel": "low",
         "auditMode": "direct"
-      },
-      "SdkAnalysisLevel": "9.0.300"
+      }
     },
     "frameworks": {
       "net8.0": {
@@ -1650,7 +1649,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.414/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

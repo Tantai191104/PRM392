@@ -27,7 +27,6 @@ namespace AuthService.Web.Controllers
         {
             var tokens = await _authService.Login(dto.Email, dto.Password);
             if (tokens == null) return Unauthorized(new { success = false, message = "Invalid credentials" });
-
             Response.Cookies.Append("refreshToken", tokens.RefreshToken, new CookieOptions
             {
                 HttpOnly = true,
@@ -36,7 +35,14 @@ namespace AuthService.Web.Controllers
                 Expires = DateTime.UtcNow.AddDays(7)
             });
 
-            return Ok(new { success = true, message = "Login success", data = tokens });
+            // Return accessToken and refreshToken at top-level for easier client parsing
+            return Ok(new
+            {
+                success = true,
+                message = "Login success",
+                accessToken = tokens.AccessToken,
+                refreshToken = tokens.RefreshToken
+            });
         }
 
         [HttpPost("refresh-token")]
