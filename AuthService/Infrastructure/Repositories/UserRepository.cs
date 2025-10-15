@@ -21,7 +21,13 @@ namespace AuthService.Infrastructure.Repositories
         public async Task<User?> GetByRefreshTokenAsync(string refreshToken) =>
             await _collection.Find(u => u.RefreshToken == refreshToken).FirstOrDefaultAsync();
 
+        public async Task<User?> GetByIdAsync(string id) =>
+            await _collection.Find(u => u.Id == id).FirstOrDefaultAsync();
+
         public async Task UpdateAsync(User user) =>
             await _collection.ReplaceOneAsync(u => u.Id == user.Id, user);
+
+        public async Task<IEnumerable<User>> GetAllAsync() =>
+            await _collection.Find(_ => true).ToListAsync();
     }
 }

@@ -34,6 +34,7 @@ C:\Users\Tai\Desktop\PRM392\AuthService\obj\Debug\net8.0\AuthService.AssemblyInf
 C:\Users\Tai\Desktop\PRM392\AuthService\obj\Debug\net8.0\AuthService.csproj.CoreCompileInputs.cache
 C:\Users\Tai\Desktop\PRM392\AuthService\obj\Debug\net8.0\AuthService.MvcApplicationPartsAssemblyInfo.cs
 C:\Users\Tai\Desktop\PRM392\AuthService\obj\Debug\net8.0\AuthService.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\Tai\Desktop\PRM392\AuthService\obj\Debug\net8.0\AuthService.sourcelink.json
 C:\Users\Tai\Desktop\PRM392\AuthService\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\Tai\Desktop\PRM392\AuthService\obj\Debug\net8.0\staticwebassets.development.json
 C:\Users\Tai\Desktop\PRM392\AuthService\obj\Debug\net8.0\staticwebassets\msbuild.AuthService.Microsoft.AspNetCore.StaticWebAssets.props

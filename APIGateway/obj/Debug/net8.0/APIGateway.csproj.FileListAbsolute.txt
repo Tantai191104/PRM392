@@ -36,6 +36,7 @@ C:\Users\Tai\Desktop\PRM392\APIGateway\obj\Debug\net8.0\APIGateway.AssemblyInfo.
 C:\Users\Tai\Desktop\PRM392\APIGateway\obj\Debug\net8.0\APIGateway.csproj.CoreCompileInputs.cache
 C:\Users\Tai\Desktop\PRM392\APIGateway\obj\Debug\net8.0\APIGateway.MvcApplicationPartsAssemblyInfo.cs
 C:\Users\Tai\Desktop\PRM392\APIGateway\obj\Debug\net8.0\APIGateway.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\Tai\Desktop\PRM392\APIGateway\obj\Debug\net8.0\APIGateway.sourcelink.json
 C:\Users\Tai\Desktop\PRM392\APIGateway\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\Tai\Desktop\PRM392\APIGateway\obj\Debug\net8.0\staticwebassets.development.json
 C:\Users\Tai\Desktop\PRM392\APIGateway\obj\Debug\net8.0\staticwebassets\msbuild.APIGateway.Microsoft.AspNetCore.StaticWebAssets.props

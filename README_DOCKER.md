@@ -13,6 +13,12 @@ docker compose up --build
 - ProductService: http://localhost:5137
 - MongoDB: mongodb://localhost:27017
 
+Public API routes (exposed by the API Gateway):
+- Auth service (proxied): http://localhost:5016/api/auth/{...}
+- Product service (proxied): http://localhost:5016/api/products/{...}
+
+Combined Swagger UI (gateway): http://localhost:5016/swagger
+
 Notes:
 - The compose file wires services via internal Docker DNS names `authservice` and `productservice`. The gateway's `Microservices` env uses these names.
 - Replace `YOUR_VERY_LONG_SECRET_KEY_HERE` with a secure key in production.

@@ -14,6 +14,8 @@
           "MongoDB.Driver": "3.5.0",
           "SharedKernel": "1.0.0",
           "Swashbuckle.AspNetCore": "9.0.6",
+          "Swashbuckle.AspNetCore.SwaggerGen": "9.0.6",
+          "Swashbuckle.AspNetCore.SwaggerUI": "9.0.6",
           "Yarp.ReverseProxy": "2.3.0"
         },
         "runtime": {
