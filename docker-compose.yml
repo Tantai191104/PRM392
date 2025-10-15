@@ -22,7 +22,7 @@ services:
     build:
       context: .
       dockerfile: AuthService/Dockerfile
-    image: prm392_authservice:latest
+    image: tantai231204/prm392_authservice:latest
     container_name: prm392_authservice
     depends_on:
       - mongo
@@ -46,7 +46,7 @@ services:
     build:
       context: .
       dockerfile: ProductService/Dockerfile
-    image: prm392_productservice:latest
+    image: tantai231204/prm392_productservice:latest
     container_name: prm392_productservice
     depends_on:
       - mongo
@@ -70,7 +70,7 @@ services:
     build:
       context: .
       dockerfile: OrderService/Dockerfile
-    image: prm392_orderservice:latest
+    image: tantai231204/prm392_orderservice:latest
     container_name: prm392_orderservice
     depends_on:
       - mongo
@@ -100,7 +100,7 @@ services:
     build:
       context: .
       dockerfile: APIGateway/Dockerfile
-    image: prm392_apigateway:latest
+    image: tantai231204/prm392_apigateway:latest
     container_name: prm392_apigateway
     depends_on:
       - authservice
@@ -119,6 +119,7 @@ services:
       # Gateway header forwarding options
       - APIGATEWAY_FORWARDALLHEADERS=false
       - APIGATEWAY_FORWARDAUTH=true
+      - Gateway__CorsAllowOrigins=http://localhost:3000;http://localhost:5173;http://192.168.1.10:8080
     ports:
       - "5016:5016"
     networks:

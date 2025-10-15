@@ -60,13 +60,21 @@ catch (Exception ex)
 }
 
 // CORS - permissive for local development; consider restricting in production
+
+// CORS - allow multiple domains from environment variable
+var allowedOrigins = builder.Configuration.GetValue<string>("Gateway__CorsAllowOrigins")?.Split(';', StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("GatewayCors", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+        if (allowedOrigins.Length > 0)
+            policy.WithOrigins(allowedOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        else
+            policy.AllowAnyOrigin()
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
     });
 });
 
