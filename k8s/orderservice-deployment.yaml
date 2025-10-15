@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orderservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orderservice
+  template:
+    metadata:
+      labels:
+        app: orderservice
+    spec:
+      containers:
+      - name: orderservice
+        image: tantai231204/orderservice:latest
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        env:
+        - name: MONGODB__CONNECTIONSTRING
+          valueFrom:
+            secretKeyRef:
+              name: orderservice-mongo-secret
+              key: connectionString
+        - name: JWT__KEY
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: key
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orderservice
+spec:
+  selector:
+    app: orderservice
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
