@@ -28,5 +28,26 @@ namespace AuthService.Domain.Entities
 
         [BsonElement("isActive")]
         public bool IsActive { get; set; } = true;
+
+        // Profile fields
+        [BsonElement("fullName")]
+        public string? FullName { get; set; }
+
+        [BsonElement("displayName")]
+        public string? DisplayName { get; set; }
+
+        [BsonElement("phone")]
+        public string? Phone { get; set; }
+
+        [BsonElement("avatarUrl")]
+        public string? AvatarUrl { get; set; }
+
+        [BsonElement("bio")]
+        public string? Bio { get; set; }
+
+        [BsonElement("address")]
+        public string? Address { get; set; }
+
+        // UpdatedAt is inherited from BaseEntity - no duplicate field here
     }
 }

@@ -12,6 +12,8 @@ namespace ProductService.Application.Services
             _repo = repo;
         }
 
+        public async Task<List<Product>> GetByOwnerId(string ownerId) => await _repo.GetByOwnerIdAsync(ownerId);
+
         public async Task<Product> Create(Product product)
         {
             await _repo.CreateAsync(product);
@@ -22,7 +24,6 @@ namespace ProductService.Application.Services
         public async Task<Product?> GetById(string id) => await _repo.GetByIdAsync(id);
         public async Task Update(Product product)
         {
-            product.UpdatedAt = DateTime.UtcNow;
             await _repo.UpdateAsync(product);
         }
         public async Task Delete(string id) => await _repo.DeleteAsync(id);

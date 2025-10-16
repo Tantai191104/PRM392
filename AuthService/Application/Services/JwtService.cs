@@ -26,6 +26,7 @@ namespace AuthService.Application.Services
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role.ToString()) // Thêm dòng này
             };
 
             var token = new JwtSecurityToken(
