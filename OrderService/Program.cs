@@ -2,13 +2,12 @@ using OrderService.Application.Services;
 using OrderService.Infrastructure.Repositories;
 using OrderService.Infrastructure.ExternalServices;
 using OrderService.Infrastructure.Configuration;
-using OrderService.Application.Validators;
-using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Text;
+using MongoDB.Driver;
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -51,28 +50,51 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("OrderPolicy", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireRole("Admin", "Staff", "User");
+    });
+});
 
 // FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddFluentValidationClientsideAdapters();
-builder.Services.AddValidatorsFromAssemblyContaining<CreateOrderDtoValidator>();
 
 // Register application services
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderAppService, OrderAppService>();
 
 // HTTP Clients (simplified without Polly for now)
+// Xóa dòng thừa, đã có đăng ký đúng phía dưới
 builder.Services.AddHttpClient<IAuthService, AuthService>(client =>
 {
-    client.BaseAddress = new Uri("http://authservice:5133");
+    var baseUrl = builder.Configuration["ExternalServices:AuthService:BaseUrl"] ?? "http://authservice:5133";
+    client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 builder.Services.AddHttpClient<IProductService, ProductService>(client =>
 {
-    client.BaseAddress = new Uri("http://productservice:5137");
+    var baseUrl = builder.Configuration["ExternalServices:ProductService:BaseUrl"] ?? "http://productservice:5137";
+    client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+// Register MongoDB
+builder.Services.AddSingleton<IMongoClient>(sp =>
+{
+    var settings = builder.Configuration.GetSection("MongoSettings").Get<MongoSettings>();
+    return new MongoClient(settings?.ConnectionString);
+});
+
+builder.Services.AddScoped<IMongoDatabase>(sp =>
+{
+    var client = sp.GetRequiredService<IMongoClient>();
+    var settings = builder.Configuration.GetSection("MongoSettings").Get<MongoSettings>();
+    return client.GetDatabase(settings?.DatabaseName);
 });
 
 // Basic Health Checks

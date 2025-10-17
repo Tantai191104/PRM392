@@ -1,122 +1,180 @@
+using MongoDB.Driver;
 using OrderService.Application.DTOs;
 using OrderService.Domain.Entities;
-using OrderService.Infrastructure.Repositories;
-using OrderService.Infrastructure.ExternalServices;
-using Microsoft.Extensions.Logging;
+using SharedKernel.Entities;
 
 namespace OrderService.Application.Services
 {
     public interface IOrderAppService
     {
-        Task<OrderResponseDto> CreateOrderAsync(CreateOrderDto dto);
-        Task<IEnumerable<OrderResponseDto>> GetOrdersAsync();
+        Task<OrderResponseDto> CreateOrderAsync(OrderDto dto, string buyerId);
         Task<OrderResponseDto?> GetOrderByIdAsync(string id);
-        Task<IEnumerable<OrderResponseDto>> GetOrdersByUserIdAsync(int userId);
+        Task<List<OrderResponseDto>> GetOrdersByBuyerAsync(string buyerId);
+        Task<List<OrderResponseDto>> GetOrdersBySellerAsync(string sellerId);
+        Task<List<OrderResponseDto>> GetAllOrdersAsync();
+        Task<bool> UpdateOrderStatusAsync(string id, OrderService.Domain.Entities.OrderStatus status);
+        Task<(List<OrderResponseDto>, int)> GetAllOrdersPagedAsync(int page, int pageSize);
+        Task<bool> CancelOrderAsync(string id, string userId);
     }
 
     public class OrderAppService : IOrderAppService
     {
-        private readonly IOrderRepository _orderRepository;
-        private readonly IAuthService _authService;
-        private readonly IProductService _productService;
-        private readonly ILogger<OrderAppService> _logger;
+        private readonly IMongoCollection<Order> _orders;
+        // Đã có khai báo và constructor đúng phía trên, xóa phần thừa này
 
-        public OrderAppService(
-            IOrderRepository orderRepository,
-            IAuthService authService,
-            IProductService productService,
-            ILogger<OrderAppService> logger)
+        public async Task<OrderResponseDto> CreateOrderAsync(OrderDto dto, string buyerId)
         {
-            _orderRepository = orderRepository;
-            _authService = authService;
-            _productService = productService;
-            _logger = logger;
-        }
+            // Fetch product details from ProductService
+            var product = await GetProductAsync(dto.ProductId);
 
-        public async Task<OrderResponseDto> CreateOrderAsync(CreateOrderDto dto)
-        {
-            _logger.LogInformation("Creating order for UserId: {UserId}, ProductId: {ProductId}, Quantity: {Quantity}", 
-                dto.UserId, dto.ProductId, dto.Quantity);
-
-            // Get user information
-            var user = await _authService.GetUserAsync(dto.UserId);
-            if (user == null)
-            {
-                _logger.LogWarning("User not found: {UserId}", dto.UserId);
-                throw new ArgumentException($"User with ID {dto.UserId} not found");
-            }
-
-            // Get product information
-            var product = await _productService.GetProductAsync(dto.ProductId);
-            if (product == null)
-            {
-                _logger.LogWarning("Product not found: {ProductId}", dto.ProductId);
-                throw new ArgumentException($"Product with ID {dto.ProductId} not found");
-            }
-
-            // Check stock availability
-            if (product.Stock < dto.Quantity)
-            {
-                _logger.LogWarning("Insufficient stock. ProductId: {ProductId}, Available: {Stock}, Requested: {Quantity}", 
-                    dto.ProductId, product.Stock, dto.Quantity);
-                throw new InvalidOperationException($"Insufficient stock. Available: {product.Stock}, Requested: {dto.Quantity}");
-            }
-
-            // Create order
             var order = new Order
             {
-                UserId = dto.UserId,
-                UserEmail = user.Email,
-                ProductId = dto.ProductId,
-                ProductName = product.Name,
-                ProductPrice = product.Price,
-                Quantity = dto.Quantity,
-                TotalAmount = product.Price * dto.Quantity,
-                Status = OrderStatus.Pending
+                Buyer = new User
+                {
+                    Id = buyerId
+                },
+                Seller = new User
+                {
+                    Id = product.OwnerId,
+                    Name = product.Brand, // Assuming Brand as Seller Name for now
+                    Email = "seller@example.com" // Placeholder email
+                },
+                Product = product,
+                TotalAmount = product.Price,
+                Status = OrderStatus.Pending // Automatically set status to Pending
             };
+            await _orders.InsertOneAsync(order);
 
-            var createdOrder = await _orderRepository.CreateAsync(order);
-            _logger.LogInformation("Order created successfully with ID: {OrderId}", createdOrder.Id);
+            // Call ProductService to set product status to 'InTransaction'
+            await HideProductAsync(dto.ProductId);
 
-            return MapToResponseDto(createdOrder);
+            return ToResponseDto(order);
         }
 
-        public async Task<IEnumerable<OrderResponseDto>> GetOrdersAsync()
+        // Hàm gọi ProductService để cập nhật trạng thái sản phẩm
+        private readonly string _productServiceBaseUrl;
+
+        public OrderAppService(IMongoDatabase database, IConfiguration config)
         {
-            _logger.LogInformation("Getting all orders");
-            var orders = await _orderRepository.GetAllAsync();
-            return orders.Select(MapToResponseDto);
+            _orders = database.GetCollection<Order>("Orders");
+            _productServiceBaseUrl = config["ExternalServices:ProductService:BaseUrl"] ?? "http://productservice:5137";
+        }
+
+        private async Task HideProductAsync(string productId)
+        {
+            using var client = new HttpClient();
+            var url = $"{_productServiceBaseUrl}/api/products/{productId}/status";
+            var content = new StringContent("{\"status\":\"InTransaction\"}", System.Text.Encoding.UTF8, "application/json");
+            var response = await client.PutAsync(url, content);
+            response.EnsureSuccessStatusCode();
+        }
+
+        private async Task<Product> GetProductAsync(string productId)
+        {
+            using var client = new HttpClient();
+            var url = $"{_productServiceBaseUrl}/api/products/{productId}";
+            var response = await client.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+                throw new HttpRequestException($"Failed to fetch product with ID {productId}");
+
+            var json = await response.Content.ReadAsStringAsync();
+            return System.Text.Json.JsonSerializer.Deserialize<Product>(json, new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            }) ?? throw new InvalidOperationException("Product deserialization failed");
         }
 
         public async Task<OrderResponseDto?> GetOrderByIdAsync(string id)
         {
-            _logger.LogInformation("Getting order by ID: {OrderId}", id);
-            var order = await _orderRepository.GetByIdAsync(id);
-            return order != null ? MapToResponseDto(order) : null;
+            var order = await _orders.Find(x => x.Id == id).FirstOrDefaultAsync();
+            return order == null ? null : ToResponseDto(order);
         }
 
-        public async Task<IEnumerable<OrderResponseDto>> GetOrdersByUserIdAsync(int userId)
+        public async Task<List<OrderResponseDto>> GetOrdersByBuyerAsync(string buyerId)
         {
-            _logger.LogInformation("Getting orders for UserId: {UserId}", userId);
-            var orders = await _orderRepository.GetByUserIdAsync(userId);
-            return orders.Select(MapToResponseDto);
+            var orders = await _orders.Find(x => x.Buyer.Id == buyerId).ToListAsync();
+            return orders.Select(ToResponseDto).ToList();
         }
 
-        private static OrderResponseDto MapToResponseDto(Order order)
+        public async Task<List<OrderResponseDto>> GetOrdersBySellerAsync(string sellerId)
+        {
+            var orders = await _orders.Find(x => x.Seller.Id == sellerId).ToListAsync();
+            return orders.Select(ToResponseDto).ToList();
+        }
+
+        public async Task<List<OrderResponseDto>> GetAllOrdersAsync()
+        {
+            var orders = await _orders.Find(_ => true).ToListAsync();
+            return orders.Select(ToResponseDto).ToList();
+        }
+
+        public async Task<bool> UpdateOrderStatusAsync(string id, OrderService.Domain.Entities.OrderStatus newStatus)
+        {
+            var order = await _orders.Find(x => x.Id == id).FirstOrDefaultAsync();
+            if (order == null)
+                throw new ArgumentException($"Order with ID {id} not found");
+
+            order.UpdateStatus(newStatus);
+
+            var update = Builders<Order>.Update.Set(o => o.Status, order.Status);
+            var result = await _orders.UpdateOneAsync(x => x.Id == id, update);
+
+            return result.ModifiedCount > 0;
+        }
+
+        public async Task<(List<OrderResponseDto>, int)> GetAllOrdersPagedAsync(int page, int pageSize)
+        {
+            var orders = await _orders.Find(_ => true)
+                .Skip((page - 1) * pageSize)
+                .Limit(pageSize)
+                .ToListAsync();
+
+            var totalCount = await _orders.CountDocumentsAsync(_ => true);
+
+            return (orders.Select(ToResponseDto).ToList(), (int)totalCount);
+        }
+
+        public async Task<bool> CancelOrderAsync(string id, string userId)
+        {
+            var order = await _orders.Find(x => x.Id == id).FirstOrDefaultAsync();
+            if (order == null)
+                throw new ArgumentException($"Order with ID {id} not found");
+
+            if (order.Status != OrderStatus.Pending)
+                throw new InvalidOperationException("Only pending orders can be canceled.");
+
+            if (order.Buyer.Id != userId)
+                throw new UnauthorizedAccessException("You are not authorized to cancel this order.");
+
+            var update = Builders<Order>.Update.Set(o => o.Status, OrderStatus.Cancelled);
+            var result = await _orders.UpdateOneAsync(x => x.Id == id, update);
+
+            return result.ModifiedCount > 0;
+        }
+
+        private OrderResponseDto ToResponseDto(Order order)
         {
             return new OrderResponseDto
             {
                 Id = order.Id,
-                UserId = order.UserId,
-                UserEmail = order.UserEmail,
-                ProductId = order.ProductId,
-                ProductName = order.ProductName,
-                ProductPrice = order.ProductPrice,
-                Quantity = order.Quantity,
+                Buyer = new UserDto
+                {
+                    Id = order.Buyer.Id,
+                    Name = order.Buyer.Name,
+                    Email = order.Buyer.Email
+                },
+                Seller = new UserDto
+                {
+                    Id = order.Seller.Id,
+                    Name = order.Seller.Name,
+                    Email = order.Seller.Email
+                },
+                ProductId = order.Product.Id,
+                ProductName = order.Product.Name,
+                ProductPrice = order.Product.Price,
                 TotalAmount = order.TotalAmount,
-                Status = order.Status.ToString(),
-                CreatedAt = order.CreatedAt,
-                UpdatedAt = order.UpdatedAt ?? order.CreatedAt
+                Status = order.Status
             };
         }
     }

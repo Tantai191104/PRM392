@@ -13,17 +13,15 @@ namespace AuthService.Application.DTOs
         [System.ComponentModel.DataAnnotations.StringLength(200)]
         public string? FullName { get; set; }
 
-        [System.ComponentModel.DataAnnotations.StringLength(100)]
-        public string? DisplayName { get; set; }
+    [System.ComponentModel.DataAnnotations.Phone]
+    public string? Phone { get; set; }
 
-        [System.ComponentModel.DataAnnotations.Phone]
-        public string? Phone { get; set; }
+    // Simple address string
+    public string? Address { get; set; }
 
-        // Simple address string
-        public string? Address { get; set; }
-
-        [System.ComponentModel.DataAnnotations.Url]
-        public string? AvatarUrl { get; set; }
+    // AvatarUrl không required
+    [System.ComponentModel.DataAnnotations.Url]
+    public string? AvatarUrl { get; set; }
     }
 
     public class LoginDto

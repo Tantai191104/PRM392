@@ -121,7 +121,7 @@ services:
       - APIGATEWAY_FORWARDAUTH=true
       - Gateway__CorsAllowOrigins=http://localhost:3000;http://localhost:5173;http://192.168.1.10:8080
     ports:
-      - "5016:5016"
+      - "5000:5016"
     networks:
       - prm392_network
 

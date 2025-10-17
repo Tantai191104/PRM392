@@ -26,7 +26,6 @@ namespace ProductService.Web.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> GetAll(
             [FromQuery] string? type,
-            [FromQuery] string? status,
             [FromQuery] string? brand,
             [FromQuery] string? voltage,
             [FromQuery] int? cycleCount,
@@ -35,58 +34,10 @@ namespace ProductService.Web.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 10)
         {
-            var products = await _service.GetAll();
+            var (items, total) = await _service.GetFilteredProducts(
+                type, "Published", brand, voltage, cycleCount, location, warranty, page, pageSize);
 
-            // Áp dụng filter
-            if (!string.IsNullOrWhiteSpace(type))
-                products = products.Where(p => p.Type == type).ToList();
-            if (!string.IsNullOrWhiteSpace(status))
-                products = products.Where(p => p.Status == status).ToList();
-            if (!string.IsNullOrWhiteSpace(brand))
-                products = products.Where(p => p.Brand == brand).ToList();
-            if (!string.IsNullOrWhiteSpace(voltage))
-                products = products.Where(p => p.Voltage == voltage).ToList();
-            if (cycleCount.HasValue)
-                products = products.Where(p => p.CycleCount == cycleCount.Value).ToList();
-            if (!string.IsNullOrWhiteSpace(location))
-                products = products.Where(p => p.Location == location).ToList();
-            if (!string.IsNullOrWhiteSpace(warranty))
-                products = products.Where(p => p.Warranty == warranty).ToList();
-
-            // Pagination
-            var total = products.Count;
-            var items = products.Skip((page - 1) * pageSize).Take(pageSize).ToList();
-
-            var client = _httpFactory.CreateClient("auth");
-            var result = new List<ProductWithOwnerDto>();
-
-            foreach (var p in items)
-            {
-                var owner = await GetOwnerAsync(client, p.OwnerId);
-                result.Add(new ProductWithOwnerDto
-                {
-                    Id = p.Id,
-                    Name = p.Name,
-                    Type = p.Type,
-                    Capacity = p.Capacity,
-                    Condition = p.Condition,
-                    Year = p.Year,
-                    Price = p.Price,
-                    Images = p.Images ?? new List<string>(),
-                    Description = p.Description,
-                    Status = p.Status,
-                    Brand = p.Brand,
-                    Voltage = p.Voltage,
-                    CycleCount = p.CycleCount,
-                    Location = p.Location,
-                    Warranty = p.Warranty,
-                    Owner = owner ?? new OwnerDto { Id = p.OwnerId },
-                    CreatedAt = p.CreatedAt,
-                    UpdatedAt = p.UpdatedAt
-                });
-            }
-
-            return Ok(new { total, page, pageSize, items = result });
+            return Ok(new { total, page, pageSize, items });
         }
 
         // 🔹 API lấy danh sách sản phẩm của người dùng đang đăng nhập
@@ -245,56 +196,94 @@ namespace ProductService.Web.Controllers
             return Ok(new { success = true });
         }
 
+        // 🔹 Approve product
+        [HttpPut("{id}/approve")]
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> ApproveProduct(string id)
+        {
+            var product = await _service.GetById(id);
+            if (product == null)
+                return NotFound();
+
+            product.Status = "Approved";
+            product.RejectionReason = null;
+
+            await _service.Update(product);
+            return Ok(product);
+        }
+
+        // 🔹 Reject product
+        [HttpPut("{id}/reject")]
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> RejectProduct(string id, [FromBody] RejectProductDto dto)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Reason))
+                return BadRequest(new { success = false, message = "Reason is required for rejection" });
+
+            var product = await _service.GetById(id);
+            if (product == null)
+                return NotFound();
+
+            product.Status = "Rejected";
+            product.RejectionReason = dto.Reason;
+
+            await _service.Update(product);
+            return Ok(product);
+        }
+
+        // 🔹 Lấy tất cả products với filter và pagination (Admin/Staff only)
+        [HttpGet("admin")]
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> GetAllForAdmin(
+            [FromQuery] string? type,
+            [FromQuery] string? brand,
+            [FromQuery] string? voltage,
+            [FromQuery] int? cycleCount,
+            [FromQuery] string? location,
+            [FromQuery] string? warranty,
+            [FromQuery] string? status = "Pending",
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var (items, total) = await _service.GetFilteredProducts(
+                type, status, brand, voltage, cycleCount, location, warranty, page, pageSize);
+
+            return Ok(new { total, page, pageSize, items });
+        }
+
         // 🔹 Helper: convert incoming Attributes dictionary of JsonElement
         private static Dictionary<string, object?> ConvertAttributes(Dictionary<string, JsonElement> input)
         {
             var result = new Dictionary<string, object?>();
-            if (input == null) return result;
-
-            foreach (var kv in input)
-                result[kv.Key] = JsonElementToObject(kv.Value);
-
+            foreach (var kvp in input)
+            {
+                result[kvp.Key] = kvp.Value.ValueKind switch
+                {
+                    JsonValueKind.String => kvp.Value.GetString(),
+                    JsonValueKind.Number => kvp.Value.GetDouble(),
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    JsonValueKind.Null => null,
+                    _ => kvp.Value.ToString()
+                };
+            }
             return result;
         }
 
-        // 🔹 Call AuthService to get owner info
-        private async Task<OwnerDto?> GetOwnerAsync(HttpClient client, string ownerId)
+        // 🔹 Helper: lấy thông tin chủ sở hữu sản phẩm từ dịch vụ xác thực
+        private static async Task<OwnerDto?> GetOwnerAsync(HttpClient client, string ownerId)
         {
-            if (string.IsNullOrWhiteSpace(ownerId))
-                return null;
-
             try
             {
-                var resp = await client.GetAsync($"/api/users/{ownerId}");
-                if (!resp.IsSuccessStatusCode)
-                    return null;
-
-                var json = await resp.Content.ReadAsStringAsync();
-                return JsonSerializer.Deserialize<OwnerDto>(json, new JsonSerializerOptions
+                var response = await client.GetAsync($"/api/users/{ownerId}");
+                if (response.IsSuccessStatusCode)
                 {
-                    PropertyNameCaseInsensitive = true
-                });
+                    var owner = await response.Content.ReadFromJsonAsync<OwnerDto>();
+                    return owner;
+                }
             }
-            catch
-            {
-                return null;
-            }
-        }
-
-        // 🔹 Convert JsonElement → Object (cho MongoDB)
-        private static object? JsonElementToObject(JsonElement je)
-        {
-            return je.ValueKind switch
-            {
-                JsonValueKind.String => je.GetString(),
-                JsonValueKind.Number => je.TryGetInt64(out var l) ? l :
-                                        je.TryGetDouble(out var d) ? d : je.GetDecimal(),
-                JsonValueKind.True or JsonValueKind.False => je.GetBoolean(),
-                JsonValueKind.Object => je.EnumerateObject().ToDictionary(
-                    prop => prop.Name, prop => JsonElementToObject(prop.Value)),
-                JsonValueKind.Array => je.EnumerateArray().Select(JsonElementToObject).ToList(),
-                _ => null
-            };
+            catch { /* ignore errors */ }
+            return null;
         }
     }
 }

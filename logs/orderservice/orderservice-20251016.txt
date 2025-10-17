@@ -124,3 +124,169 @@
 2025-10-16 12:42:37.084 +00:00 [INF] Application started. Press Ctrl+C to shut down.
 2025-10-16 12:42:37.084 +00:00 [INF] Hosting environment: Development
 2025-10-16 12:42:37.084 +00:00 [INF] Content root path: /app
+2025-10-16 15:22:40.596 +00:00 [WRN] Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning
+2025-10-16 15:22:43.643 +00:00 [INF] User profile is available. Using '/root/.aspnet/DataProtection-Keys' as key repository; keys will not be encrypted at rest.
+2025-10-16 15:22:43.663 +00:00 [WRN] Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:5139'.
+2025-10-16 15:22:44.034 +00:00 [INF] Now listening on: http://[::]:5139
+2025-10-16 15:22:44.252 +00:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-16 15:22:44.252 +00:00 [INF] Hosting environment: Development
+2025-10-16 15:22:44.253 +00:00 [INF] Content root path: /app
+2025-10-16 15:25:01.896 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/swagger/v1/swagger.json - null null
+2025-10-16 15:25:01.959 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 62.8729ms
+2025-10-16 15:36:00.721 +00:00 [INF] Application is shutting down...
+2025-10-16 18:25:35.834 +00:00 [WRN] Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning
+2025-10-16 18:25:35.894 +00:00 [INF] User profile is available. Using '/root/.aspnet/DataProtection-Keys' as key repository; keys will not be encrypted at rest.
+2025-10-16 18:25:35.910 +00:00 [INF] Creating key {af2abf41-cad2-41bd-9c65-eb48a3a6a9b1} with creation date 2025-10-16 18:25:35Z, activation date 2025-10-16 18:25:35Z, and expiration date 2026-01-14 18:25:35Z.
+2025-10-16 18:25:35.920 +00:00 [WRN] No XML encryptor configured. Key {af2abf41-cad2-41bd-9c65-eb48a3a6a9b1} may be persisted to storage in unencrypted form.
+2025-10-16 18:25:35.923 +00:00 [INF] Writing data to file '/root/.aspnet/DataProtection-Keys/key-af2abf41-cad2-41bd-9c65-eb48a3a6a9b1.xml'.
+2025-10-16 18:25:35.930 +00:00 [WRN] Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:5139'.
+2025-10-16 18:25:35.968 +00:00 [INF] Now listening on: http://[::]:5139
+2025-10-16 18:25:35.968 +00:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-16 18:25:35.969 +00:00 [INF] Hosting environment: Development
+2025-10-16 18:25:35.969 +00:00 [INF] Content root path: /app
+2025-10-16 18:26:32.758 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/swagger/v1/swagger.json - null null
+2025-10-16 18:26:32.832 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 75.1784ms
+2025-10-16 18:26:56.095 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/api/orders?page=1&pageSize=10 - null null
+2025-10-16 18:26:56.137 +00:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Endpoint OrderService.Web.Controllers.OrderController.GetAllOrders (OrderService) contains authorization metadata, but a middleware was not found that supports authorization.
+Configure your application startup by adding app.UseAuthorization() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAuthorization() must go between them.
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.ThrowMissingAuthMiddlewareException(Endpoint endpoint)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+2025-10-16 18:26:56.145 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/api/orders?page=1&pageSize=10 - 500 null text/plain; charset=utf-8 49.9942ms
+2025-10-16 18:29:01.449 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/api/orders/seller - null null
+2025-10-16 18:29:01.452 +00:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Endpoint OrderService.Web.Controllers.OrderController.GetMyOrdersAsSeller (OrderService) contains authorization metadata, but a middleware was not found that supports authorization.
+Configure your application startup by adding app.UseAuthorization() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAuthorization() must go between them.
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.ThrowMissingAuthMiddlewareException(Endpoint endpoint)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+2025-10-16 18:29:01.454 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/api/orders/seller - 500 null text/plain; charset=utf-8 4.8929ms
+2025-10-16 18:29:04.185 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/api/orders/seller - null null
+2025-10-16 18:29:04.203 +00:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Endpoint OrderService.Web.Controllers.OrderController.GetMyOrdersAsSeller (OrderService) contains authorization metadata, but a middleware was not found that supports authorization.
+Configure your application startup by adding app.UseAuthorization() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAuthorization() must go between them.
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.ThrowMissingAuthMiddlewareException(Endpoint endpoint)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+2025-10-16 18:29:04.204 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/api/orders/seller - 500 null text/plain; charset=utf-8 18.9229ms
+2025-10-16 18:29:04.452 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/api/orders/seller - null null
+2025-10-16 18:29:04.453 +00:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Endpoint OrderService.Web.Controllers.OrderController.GetMyOrdersAsSeller (OrderService) contains authorization metadata, but a middleware was not found that supports authorization.
+Configure your application startup by adding app.UseAuthorization() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAuthorization() must go between them.
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.ThrowMissingAuthMiddlewareException(Endpoint endpoint)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+2025-10-16 18:29:04.455 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/api/orders/seller - 500 null text/plain; charset=utf-8 2.808ms
+2025-10-16 18:29:04.686 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/api/orders/seller - null null
+2025-10-16 18:29:04.689 +00:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Endpoint OrderService.Web.Controllers.OrderController.GetMyOrdersAsSeller (OrderService) contains authorization metadata, but a middleware was not found that supports authorization.
+Configure your application startup by adding app.UseAuthorization() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAuthorization() must go between them.
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.ThrowMissingAuthMiddlewareException(Endpoint endpoint)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+2025-10-16 18:29:04.690 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/api/orders/seller - 500 null text/plain; charset=utf-8 3.7251ms
+2025-10-16 18:29:04.912 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/api/orders/seller - null null
+2025-10-16 18:29:04.913 +00:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Endpoint OrderService.Web.Controllers.OrderController.GetMyOrdersAsSeller (OrderService) contains authorization metadata, but a middleware was not found that supports authorization.
+Configure your application startup by adding app.UseAuthorization() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAuthorization() must go between them.
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.ThrowMissingAuthMiddlewareException(Endpoint endpoint)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+2025-10-16 18:29:04.914 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/api/orders/seller - 500 null text/plain; charset=utf-8 1.9387ms
+2025-10-16 18:29:05.084 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/api/orders/seller - null null
+2025-10-16 18:29:05.087 +00:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Endpoint OrderService.Web.Controllers.OrderController.GetMyOrdersAsSeller (OrderService) contains authorization metadata, but a middleware was not found that supports authorization.
+Configure your application startup by adding app.UseAuthorization() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAuthorization() must go between them.
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.ThrowMissingAuthMiddlewareException(Endpoint endpoint)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+2025-10-16 18:29:05.092 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/api/orders/seller - 500 null text/plain; charset=utf-8 8.2305ms
+2025-10-16 18:29:05.227 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/api/orders/seller - null null
+2025-10-16 18:29:05.229 +00:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Endpoint OrderService.Web.Controllers.OrderController.GetMyOrdersAsSeller (OrderService) contains authorization metadata, but a middleware was not found that supports authorization.
+Configure your application startup by adding app.UseAuthorization() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAuthorization() must go between them.
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.ThrowMissingAuthMiddlewareException(Endpoint endpoint)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+2025-10-16 18:29:05.230 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/api/orders/seller - 500 null text/plain; charset=utf-8 2.4251ms
+2025-10-16 18:29:05.374 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/api/orders/seller - null null
+2025-10-16 18:29:05.375 +00:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Endpoint OrderService.Web.Controllers.OrderController.GetMyOrdersAsSeller (OrderService) contains authorization metadata, but a middleware was not found that supports authorization.
+Configure your application startup by adding app.UseAuthorization() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAuthorization() must go between them.
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.ThrowMissingAuthMiddlewareException(Endpoint endpoint)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+2025-10-16 18:29:05.377 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/api/orders/seller - 500 null text/plain; charset=utf-8 2.7323ms
+2025-10-16 18:29:05.950 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/api/orders/seller - null null
+2025-10-16 18:29:05.951 +00:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Endpoint OrderService.Web.Controllers.OrderController.GetMyOrdersAsSeller (OrderService) contains authorization metadata, but a middleware was not found that supports authorization.
+Configure your application startup by adding app.UseAuthorization() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAuthorization() must go between them.
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.ThrowMissingAuthMiddlewareException(Endpoint endpoint)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+2025-10-16 18:29:05.953 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/api/orders/seller - 500 null text/plain; charset=utf-8 2.9759ms
+2025-10-16 18:29:06.357 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/api/orders/seller - null null
+2025-10-16 18:29:06.359 +00:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Endpoint OrderService.Web.Controllers.OrderController.GetMyOrdersAsSeller (OrderService) contains authorization metadata, but a middleware was not found that supports authorization.
+Configure your application startup by adding app.UseAuthorization() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAuthorization() must go between them.
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.ThrowMissingAuthMiddlewareException(Endpoint endpoint)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+2025-10-16 18:29:06.360 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/api/orders/seller - 500 null text/plain; charset=utf-8 3.1916ms
+2025-10-16 18:29:06.866 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/api/orders/seller - null null
+2025-10-16 18:29:06.867 +00:00 [ERR] An unhandled exception has occurred while executing the request.
+System.InvalidOperationException: Endpoint OrderService.Web.Controllers.OrderController.GetMyOrdersAsSeller (OrderService) contains authorization metadata, but a middleware was not found that supports authorization.
+Configure your application startup by adding app.UseAuthorization() in the application startup code. If there are calls to app.UseRouting() and app.UseEndpoints(...), the call to app.UseAuthorization() must go between them.
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.ThrowMissingAuthMiddlewareException(Endpoint endpoint)
+   at Microsoft.AspNetCore.Routing.EndpointMiddleware.Invoke(HttpContext httpContext)
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)
+   at Swashbuckle.AspNetCore.SwaggerUI.SwaggerUIMiddleware.Invoke(HttpContext httpContext)
+   at Swashbuckle.AspNetCore.Swagger.SwaggerMiddleware.Invoke(HttpContext httpContext, ISwaggerProvider swaggerProvider)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+2025-10-16 18:29:06.868 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/api/orders/seller - 500 null text/plain; charset=utf-8 2.2061ms

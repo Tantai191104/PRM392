@@ -45,7 +45,6 @@ namespace AuthService.Application.Services
                 Email = email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
                 FullName = dto.FullName,
-                DisplayName = dto.DisplayName,
                 Phone = dto.Phone,
                 Address = dto.Address,
                 AvatarUrl = string.IsNullOrWhiteSpace(dto.AvatarUrl)

@@ -26,5 +26,6 @@ namespace ProductService.Domain.Entities
         public string OwnerId { get; set; } = null!;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        public string? RejectionReason { get; set; } // Lý do từ chối
     }
 }

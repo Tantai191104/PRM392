@@ -113,8 +113,8 @@ namespace AuthService.Web.Controllers
             return Ok(resp);
         }
 
-        // GET /api/users/me
-        [HttpGet("me")]
+        // GET /api/users/profile
+        [HttpGet("profile")]
         [Authorize]
         public async Task<IActionResult> GetCurrentUser()
         {

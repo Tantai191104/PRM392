@@ -6,7 +6,7 @@ namespace OrderService.Infrastructure.ExternalServices
 {
     public interface IAuthService
     {
-        Task<UserDto?> GetUserAsync(int userId);
+        Task<UserDto?> GetUserAsync(string userId);
     }
 
     public class AuthService : IAuthService
@@ -25,25 +25,20 @@ namespace OrderService.Infrastructure.ExternalServices
             };
         }
 
-        public async Task<UserDto?> GetUserAsync(int userId)
+        public async Task<UserDto?> GetUserAsync(string userId)
         {
             try
             {
                 _logger.LogInformation("Getting user with ID: {UserId}", userId);
-                
                 var response = await _httpClient.GetAsync($"/api/users/{userId}");
-                
                 if (response.IsSuccessStatusCode)
                 {
                     var content = await response.Content.ReadAsStringAsync();
                     var user = JsonSerializer.Deserialize<UserDto>(content, _jsonOptions);
-                    
                     _logger.LogInformation("Successfully retrieved user: {UserEmail}", user?.Email);
                     return user;
                 }
-                
-                _logger.LogWarning("User not found. UserId: {UserId}, StatusCode: {StatusCode}", 
-                    userId, response.StatusCode);
+                _logger.LogWarning("User not found. UserId: {UserId}, StatusCode: {StatusCode}", userId, response.StatusCode);
                 return null;
             }
             catch (Exception ex)

@@ -119,7 +119,7 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5016", "http://127.0.0.1:5016") // Gateway
+        policy.WithOrigins("http://localhost:5000", "http://127.0.0.1:5000") // Gateway
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
