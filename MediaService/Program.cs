@@ -55,6 +55,8 @@ builder.Services.AddSwaggerGen(c =>
             new string[] {}
         }
     });
+    // Handle IFormFile parameters in controllers for proper Swagger generation
+    c.OperationFilter<MediaService.Swagger.FileUploadOperationFilter>();
 });
 
 // ===== JWT Authentication =====

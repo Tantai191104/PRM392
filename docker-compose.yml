@@ -205,11 +205,15 @@ services:
       - DOWNSTREAMSWAGGER_ORDERS=http://orderservice:5139
       - DOWNSTREAMSWAGGER_MEDIA=http://mediaservice:5140
       - DOWNSTREAMSWAGGER_ESCROW=http://escrowservice:5141
+      - DOWNSTREAMSWAGGER_ESCROWS=http://escrowservice:5141
       - DOWNSTREAMSWAGGER_CHAT=http://chatservice:5142
+      - DOWNSTREAMSWAGGER_CHATS=http://chatservice:5142
       # Gateway header forwarding options
       - APIGATEWAY_FORWARDALLHEADERS=false
       - APIGATEWAY_FORWARDAUTH=true
       - Gateway__CorsAllowOrigins=http://localhost:3000;http://localhost:5173;http://192.168.1.10:8080
+    volumes:
+      - ./APIGateway/appsettings.json:/app/appsettings.json:ro
     ports:
       - "5000:5016"
     networks:

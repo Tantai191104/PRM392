@@ -22,17 +22,17 @@ namespace MediaService.Web.Controllers
         /// </summary>
         [HttpPost("upload")]
         [Authorize]
-        public async Task<IActionResult> UploadFile([FromForm] string listingId, [FromForm] IFormFile file, [FromForm] int order = 0)
+        public async Task<IActionResult> UploadFile([FromForm] MediaService.Web.Models.UploadSingleFormModel form)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(listingId))
+                if (string.IsNullOrWhiteSpace(form.ListingId))
                     return BadRequest(new { success = false, message = "ListingId is required" });
 
-                if (file == null)
+                if (form.File == null)
                     return BadRequest(new { success = false, message = "File is required" });
 
-                var result = await _mediaService.UploadFileAsync(listingId, file, order);
+                var result = await _mediaService.UploadFileAsync(form.ListingId, form.File, form.Order);
                 return Ok(new { success = true, data = result });
             }
             catch (ArgumentException ex)
@@ -51,17 +51,17 @@ namespace MediaService.Web.Controllers
         /// </summary>
         [HttpPost("upload/bulk")]
         [Authorize]
-        public async Task<IActionResult> BulkUpload([FromForm] string listingId, [FromForm] List<IFormFile> files)
+        public async Task<IActionResult> BulkUpload([FromForm] MediaService.Web.Models.UploadBulkFormModel form)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(listingId))
+                if (string.IsNullOrWhiteSpace(form.ListingId))
                     return BadRequest(new { success = false, message = "ListingId is required" });
 
-                if (files == null || files.Count == 0)
+                if (form.Files == null || form.Files.Count == 0)
                     return BadRequest(new { success = false, message = "At least one file is required" });
 
-                var result = await _mediaService.BulkUploadAsync(listingId, files);
+                var result = await _mediaService.BulkUploadAsync(form.ListingId, form.Files);
                 return Ok(new { success = true, data = result });
             }
             catch (Exception ex)
