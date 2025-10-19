@@ -1,0 +1,56 @@
+### Health check
+GET http://localhost:5140/health
+
+### Upload single file (requires JWT token)
+POST http://localhost:5140/api/media/upload
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="listingId"
+
+67890abcdef1234567890abc
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="battery.jpg"
+Content-Type: image/jpeg
+
+< ./test-images/battery.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="order"
+
+0
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### Get media by ID
+GET http://localhost:5140/api/media/67890abcdef1234567890abc
+
+### Get all media for a listing
+GET http://localhost:5140/api/media/listing/67890abcdef1234567890abc
+
+### Download file
+GET http://localhost:5140/api/media/67890abcdef1234567890abc/download
+
+### Delete media (requires JWT token)
+DELETE http://localhost:5140/api/media/67890abcdef1234567890abc
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### ===============================================
+### Through Gateway
+### ===============================================
+
+### Upload through gateway
+POST http://localhost:5000/api/media/upload
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="listingId"
+
+67890abcdef1234567890abc
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="battery.jpg"
+Content-Type: image/jpeg
+
+< ./test-images/battery.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+

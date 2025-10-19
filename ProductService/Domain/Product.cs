@@ -10,7 +10,9 @@ namespace ProductService.Domain.Entities
         public int CycleCount { get; set; }
         public string Location { get; set; } = string.Empty;
         public string Warranty { get; set; } = string.Empty;
-        public string Status { get; set; } = "Pending"; // Pending, Published, InTransaction, Sold, Expired, Rejected
+        public string Status { get; set; } = "Draft"; // Draft, PendingReview, Published, InTransaction, Sold, Expired, Rejected
+        public double? SOH { get; set; } // State of Health (%)
+        public string ListingType { get; set; } = "FixedPrice"; // FixedPrice, Auction
         [BsonId]
         [BsonRepresentation(BsonType.ObjectId)]
         public string Id { get; set; } = null!;

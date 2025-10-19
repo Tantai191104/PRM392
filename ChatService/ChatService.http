@@ -1,0 +1,72 @@
+### Health check
+GET http://localhost:5142/health
+
+### Create or get chat
+POST http://localhost:5142/api/chats
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "listingId": "67890abcdef1234567890abc",
+  "sellerId": "12345abcdef1234567890abc"
+}
+
+### Get chat by ID
+GET http://localhost:5142/api/chats/67890abcdef1234567890abc
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### Get user's chats
+GET http://localhost:5142/api/chats
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### Get chat messages
+GET http://localhost:5142/api/chats/67890abcdef1234567890abc/messages?page=1&pageSize=50
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### Send message (REST fallback)
+POST http://localhost:5142/api/chats/67890abcdef1234567890abc/messages
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "content": "Hello, is this battery still available?",
+  "attachments": []
+}
+
+### Mark as read
+POST http://localhost:5142/api/chats/67890abcdef1234567890abc/read
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### ===============================================
+### SignalR Connection (JavaScript example)
+### ===============================================
+
+# const connection = new signalR.HubConnectionBuilder()
+#     .withUrl("http://localhost:5142/hubs/chat", {
+#         accessTokenFactory: () => YOUR_JWT_TOKEN
+#     })
+#     .build();
+#
+# // Start connection
+# await connection.start();
+#
+# // Join chat room
+# await connection.invoke("JoinChat", "chatId");
+#
+# // Listen for messages
+# connection.on("ReceiveMessage", (message) => {
+#     console.log("New message:", message);
+# });
+#
+# // Send message
+# await connection.invoke("SendMessage", "chatId", {
+#     content: "Hello!",
+#     attachments: []
+# });
+#
+# // Typing indicator
+# await connection.invoke("Typing", "chatId", true);
+#
+# // Mark as read
+# await connection.invoke("MarkAsRead", "chatId");
+

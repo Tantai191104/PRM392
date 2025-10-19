@@ -22,6 +22,7 @@ string dbName = mongoSettings["DatabaseName"]!;
 // ===== DI =====
 builder.Services.AddSingleton(new ProductRepository(client, dbName));
 builder.Services.AddSingleton<ProductAppService>();
+builder.Services.AddSingleton<IPriceSuggestionService, PriceSuggestionService>();
 
 // ===== Controllers + Swagger =====
 builder.Services.AddControllers();
