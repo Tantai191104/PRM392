@@ -92,3 +92,4 @@ Configure your application startup by adding app.UseAuthorization() in the appli
 2025-10-17 11:00:13.462 +00:00 [INF] Content root path: /app
 2025-10-17 11:00:35.623 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/swagger/v1/swagger.json - null null
 2025-10-17 11:00:35.709 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 85.7165ms
+2025-10-17 11:04:58.306 +00:00 [INF] Application is shutting down...

@@ -1,4 +1,6 @@
-# Ignore build output
+# Ignore build output (all projects)
+**/bin/
+**/obj/
 bin/
 obj/
 # Ignore user-specific files
@@ -6,8 +8,10 @@ obj/
 *.suo
 *.userosscache
 *.sln.docstates
-# Ignore VS Code settings
+# Ignore IDE/editor settings
 .vscode/
+.idea/
+.vs/
 # Ignore logs
 *.log
 # Ignore generated files
