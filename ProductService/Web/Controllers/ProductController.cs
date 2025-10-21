@@ -270,6 +270,80 @@ namespace ProductService.Web.Controllers
             return result;
         }
 
+        // 🔹 Update product status
+        [HttpPut("{id}/status")]
+        [Authorize]
+        public async Task<IActionResult> UpdateStatus(string id, [FromBody] UpdateStatusDto dto)
+        {
+            var product = await _service.GetById(id);
+            if (product == null)
+                return NotFound();
+
+            var callerId = User?.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
+                           ?? User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                           ?? Request.Headers["X-User-Id"].FirstOrDefault();
+
+            var isAdmin = User.IsInRole("Admin") || User.IsInRole("Staff");
+
+            // Only owner or admin can update status
+            if (!isAdmin && callerId != product.OwnerId)
+                return Forbid("You are not authorized to update this product");
+
+            // Validate status transition
+            var validStatuses = new[] { "Draft", "PendingReview", "Published", "InTransaction", "Sold", "Expired", "Rejected" };
+            if (!validStatuses.Contains(dto.Status))
+                return BadRequest(new { success = false, message = "Invalid status" });
+
+            product.Status = dto.Status;
+            product.UpdatedAt = DateTime.UtcNow;
+
+            await _service.Update(product);
+            return Ok(product);
+        }
+
+        // 🔹 Publish listing (change status from Draft to PendingReview)
+        [HttpPost("{id}/publish")]
+        [Authorize]
+        public async Task<IActionResult> PublishListing(string id)
+        {
+            var product = await _service.GetById(id);
+            if (product == null)
+                return NotFound();
+
+            var callerId = User?.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
+                           ?? User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                           ?? Request.Headers["X-User-Id"].FirstOrDefault();
+
+            if (callerId != product.OwnerId)
+                return Forbid("You are not the owner of this product");
+
+            if (product.Status != "Draft")
+                return BadRequest(new { success = false, message = $"Cannot publish product with status {product.Status}" });
+
+            product.Status = "PendingReview";
+            product.UpdatedAt = DateTime.UtcNow;
+
+            await _service.Update(product);
+            return Ok(new { success = true, message = "Product submitted for review", product });
+        }
+
+        // 🔹 Get price suggestion (AI mock - rule-based)
+        [HttpPost("price-suggestion")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetPriceSuggestion([FromBody] PriceSuggestionRequest request, 
+            [FromServices] IPriceSuggestionService priceService)
+        {
+            try
+            {
+                var suggestion = await priceService.GetPriceSuggestionAsync(request);
+                return Ok(new { success = true, data = suggestion });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Error calculating price suggestion", error = ex.Message });
+            }
+        }
+
         // 🔹 Helper: lấy thông tin chủ sở hữu sản phẩm từ dịch vụ xác thực
         private static async Task<OwnerDto?> GetOwnerAsync(HttpClient client, string ownerId)
         {

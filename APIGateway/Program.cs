@@ -173,16 +173,33 @@ app.UseSwaggerUI(c =>
     // Register gateway's own doc
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "API Gateway v1");
 
-    // For each downstream service configured, publish a Swagger UI entry that points to the proxied path
-    foreach (var kv in downstream)
+    // Build a sorted list of downstream services to show in the UI
+    var downstreamList = downstream
+        .OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+        .Select(kv => new { Key = kv.Key, Url = $"/api/{kv.Key}/swagger/v1/swagger.json" })
+        .ToList();
+
+    // Friendly label function (Title case, replace '-' with ' ')
+    string FriendlyLabel(string key)
     {
-        // Example: service key 'auth' -> proxied swagger path '/api/auth/swagger/v1/swagger.json'
-        var serviceName = kv.Key;
-        var proxiedUrl = $"/api/{serviceName}/swagger/v1/swagger.json";
-        c.SwaggerEndpoint(proxiedUrl, $"{serviceName} (proxied)");
+        if (string.IsNullOrWhiteSpace(key)) return key;
+        var parts = key.Replace('-', ' ').Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < parts.Length; i++) parts[i] = char.ToUpper(parts[i][0]) + parts[i].Substring(1);
+        return string.Join(' ', parts);
     }
 
-    c.RoutePrefix = "swagger";
+    foreach (var item in downstreamList)
+    {
+        var label = FriendlyLabel(item.Key);
+        c.SwaggerEndpoint(item.Url, $"{label} (proxied)");
+    }
+
+    // UI niceties
+    c.RoutePrefix = "swagger"; // keep UI at /swagger
+    c.DisplayRequestDuration(); // show request duration in the UI
+    c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.List); // collapse by default but show groups
+    c.DefaultModelsExpandDepth(-1); // hide schema models by default
+    // Note: tag/operation sorting varies by Swagger UI version; keep default ordering here.
 });
 
 // Map health endpoints
