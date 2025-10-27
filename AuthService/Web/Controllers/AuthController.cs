@@ -33,8 +33,11 @@ namespace AuthService.Web.Controllers
             if (result == null)
                 return Unauthorized(new { success = false, code = ErrorCodes.Unauthorized, message = "Invalid credentials" });
 
+            if (!string.IsNullOrEmpty(result.Error))
+                return Unauthorized(new { success = false, code = ErrorCodes.Unauthorized, message = result.Error });
+
             // set refresh token cookie
-            Response.Cookies.Append("refreshToken", result.Tokens.RefreshToken, new CookieOptions
+            Response.Cookies.Append("refreshToken", result.Tokens!.RefreshToken, new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,

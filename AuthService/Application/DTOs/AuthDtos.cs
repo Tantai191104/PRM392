@@ -6,7 +6,6 @@ namespace AuthService.Application.DTOs
         [System.ComponentModel.DataAnnotations.EmailAddress]
         public required string Email { get; set; }
 
-        [System.ComponentModel.DataAnnotations.Required]
         [System.ComponentModel.DataAnnotations.MinLength(8)]
         public required string Password { get; set; }
 
@@ -35,8 +34,9 @@ namespace AuthService.Application.DTOs
 
     public class LoginResultDto
     {
-        public TokenResponseDto Tokens { get; set; } = new TokenResponseDto();
-        public UserResponseDto User { get; set; } = new UserResponseDto();
+    public TokenResponseDto? Tokens { get; set; }
+    public UserResponseDto? User { get; set; }
+    public string? Error { get; set; }
     }
 
     public class RegisterResultDto

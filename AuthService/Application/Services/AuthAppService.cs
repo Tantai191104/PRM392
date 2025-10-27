@@ -60,7 +60,6 @@ namespace AuthService.Application.Services
                 DisplayName = user.DisplayName,
                 Phone = user.Phone,
                 AvatarUrl = user.AvatarUrl,
-                Bio = user.Bio,
                 Address = user.Address,
                 Role = user.Role.ToString(),
                 IsActive = user.IsActive
@@ -71,9 +70,13 @@ namespace AuthService.Application.Services
 
         public async Task<LoginResultDto?> Login(string email, string password)
         {
+
             var user = await _userRepo.GetByEmailAsync(email);
             if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
                 return null;
+            // Block login if user is banned (IsActive == false)
+            if (!user.IsActive)
+                return new LoginResultDto { Tokens = null, User = null, Error = "Tài khoản đã bị khóa/banned" };
 
             var accessToken = _jwtService.GenerateAccessToken(user);
             var refreshToken = _jwtService.GenerateRefreshToken();
@@ -92,7 +95,6 @@ namespace AuthService.Application.Services
                 DisplayName = user.DisplayName,
                 Phone = user.Phone,
                 AvatarUrl = user.AvatarUrl,
-                Bio = user.Bio,
                 Address = user.Address,
                 Role = user.Role.ToString(),
                 IsActive = user.IsActive

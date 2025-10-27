@@ -53,3 +53,4 @@
 2025-10-27 08:00:04.845 +00:00 [INF] Content root path: /app
 2025-10-27 08:08:28.008 +00:00 [INF] Request starting HTTP/1.1 GET http://orderservice:5139/swagger/v1/swagger.json - null null
 2025-10-27 08:08:28.072 +00:00 [INF] Request finished HTTP/1.1 GET http://orderservice:5139/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 64.5017ms
+2025-10-27 08:12:22.496 +00:00 [INF] Application is shutting down...

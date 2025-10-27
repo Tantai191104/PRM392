@@ -42,8 +42,6 @@ namespace AuthService.Domain.Entities
         [BsonElement("avatarUrl")]
         public string? AvatarUrl { get; set; }
 
-        [BsonElement("bio")]
-        public string? Bio { get; set; }
 
         [BsonElement("address")]
         public string? Address { get; set; }

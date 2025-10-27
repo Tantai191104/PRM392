@@ -37,3 +37,4 @@
 2025-10-27 08:02:21.817 +00:00 [INF] Request finished HTTP/1.1 GET http://localhost:5141/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 74.0335ms
 2025-10-27 08:06:06.369 +00:00 [INF] Request starting HTTP/1.1 GET http://escrowservice:5141/swagger/v1/swagger.json - null null
 2025-10-27 08:06:06.373 +00:00 [INF] Request finished HTTP/1.1 GET http://escrowservice:5141/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 4.3202ms
+2025-10-27 08:12:21.790 +00:00 [INF] Application is shutting down...
