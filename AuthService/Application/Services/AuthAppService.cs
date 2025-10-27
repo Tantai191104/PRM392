@@ -47,9 +47,7 @@ namespace AuthService.Application.Services
                 FullName = dto.FullName,
                 Phone = dto.Phone,
                 Address = dto.Address,
-                AvatarUrl = string.IsNullOrWhiteSpace(dto.AvatarUrl)
-                    ? "https://ui-avatars.com/api/?name=User"
-                    : dto.AvatarUrl
+                AvatarUrl = "https://ui-avatars.com/api/?name=User"
             };
 
             await _userRepo.CreateAsync(user);

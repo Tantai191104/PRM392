@@ -9,19 +9,16 @@ namespace AuthService.Application.DTOs
         [System.ComponentModel.DataAnnotations.Required]
         [System.ComponentModel.DataAnnotations.MinLength(8)]
         public required string Password { get; set; }
-        
+
         [System.ComponentModel.DataAnnotations.StringLength(200)]
         public string? FullName { get; set; }
 
-    [System.ComponentModel.DataAnnotations.Phone]
-    public string? Phone { get; set; }
+        [System.ComponentModel.DataAnnotations.Phone]
+        public string? Phone { get; set; }
 
-    // Simple address string
-    public string? Address { get; set; }
+        // Simple address string
+        public string? Address { get; set; }
 
-    // AvatarUrl không required
-    [System.ComponentModel.DataAnnotations.Url]
-    public string? AvatarUrl { get; set; }
     }
 
     public class LoginDto

@@ -205,7 +205,7 @@ namespace ProductService.Web.Controllers
             if (product == null)
                 return NotFound();
 
-            product.Status = "Approved";
+            product.Status = "Published";
             product.RejectionReason = null;
 
             await _service.Update(product);
@@ -283,14 +283,14 @@ namespace ProductService.Web.Controllers
                            ?? User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                            ?? Request.Headers["X-User-Id"].FirstOrDefault();
 
-            var isAdmin = User.IsInRole("Admin") || User.IsInRole("Staff");
+            var isAdmin = (User?.IsInRole("Admin") ?? false) || (User?.IsInRole("Staff") ?? false);
 
             // Only owner or admin can update status
             if (!isAdmin && callerId != product.OwnerId)
                 return Forbid("You are not authorized to update this product");
 
             // Validate status transition
-            var validStatuses = new[] { "Draft", "PendingReview", "Published", "InTransaction", "Sold", "Expired", "Rejected" };
+            var validStatuses = new[] { "Draft", "Pending", "Published", "InTransaction", "Sold", "Expired", "Rejected" };
             if (!validStatuses.Contains(dto.Status))
                 return BadRequest(new { success = false, message = "Invalid status" });
 
@@ -320,7 +320,7 @@ namespace ProductService.Web.Controllers
             if (product.Status != "Draft")
                 return BadRequest(new { success = false, message = $"Cannot publish product with status {product.Status}" });
 
-            product.Status = "PendingReview";
+            product.Status = "Pending";
             product.UpdatedAt = DateTime.UtcNow;
 
             await _service.Update(product);
@@ -330,7 +330,7 @@ namespace ProductService.Web.Controllers
         // 🔹 Get price suggestion (AI mock - rule-based)
         [HttpPost("price-suggestion")]
         [AllowAnonymous]
-        public async Task<IActionResult> GetPriceSuggestion([FromBody] PriceSuggestionRequest request, 
+        public async Task<IActionResult> GetPriceSuggestion([FromBody] PriceSuggestionRequest request,
             [FromServices] IPriceSuggestionService priceService)
         {
             try

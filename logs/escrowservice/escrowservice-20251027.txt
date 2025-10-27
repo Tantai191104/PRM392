@@ -1,0 +1,39 @@
+2025-10-27 07:22:49.367 +00:00 [WRN] Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning
+2025-10-27 07:22:49.416 +00:00 [INF] User profile is available. Using '/root/.aspnet/DataProtection-Keys' as key repository; keys will not be encrypted at rest.
+2025-10-27 07:22:49.422 +00:00 [INF] Creating key {2f863dd6-c447-4247-99f2-8af9114ded6d} with creation date 2025-10-27 07:22:49Z, activation date 2025-10-27 07:22:49Z, and expiration date 2026-01-25 07:22:49Z.
+2025-10-27 07:22:49.429 +00:00 [WRN] No XML encryptor configured. Key {2f863dd6-c447-4247-99f2-8af9114ded6d} may be persisted to storage in unencrypted form.
+2025-10-27 07:22:49.431 +00:00 [INF] Writing data to file '/root/.aspnet/DataProtection-Keys/key-2f863dd6-c447-4247-99f2-8af9114ded6d.xml'.
+2025-10-27 07:22:49.439 +00:00 [WRN] Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:5141'.
+2025-10-27 07:22:49.475 +00:00 [INF] Now listening on: http://[::]:5141
+2025-10-27 07:22:49.476 +00:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-27 07:22:49.476 +00:00 [INF] Hosting environment: Development
+2025-10-27 07:22:49.476 +00:00 [INF] Content root path: /app
+2025-10-27 07:30:29.757 +00:00 [INF] Request starting HTTP/1.1 GET http://localhost:5141/swagger/v1/swagger.json - null null
+2025-10-27 07:30:29.829 +00:00 [INF] Request finished HTTP/1.1 GET http://localhost:5141/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 72.2682ms
+2025-10-27 07:32:31.153 +00:00 [INF] Request starting HTTP/1.1 GET http://escrowservice:5141/swagger/v1/swagger.json - null null
+2025-10-27 07:32:31.157 +00:00 [INF] Request finished HTTP/1.1 GET http://escrowservice:5141/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 4.494ms
+2025-10-27 07:42:14.414 +00:00 [INF] Application is shutting down...
+2025-10-27 07:49:09.504 +00:00 [WRN] Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning
+2025-10-27 07:49:09.668 +00:00 [INF] User profile is available. Using '/root/.aspnet/DataProtection-Keys' as key repository; keys will not be encrypted at rest.
+2025-10-27 07:49:09.687 +00:00 [INF] Creating key {5771fe43-4f9c-409f-acdf-dbc895c94d1d} with creation date 2025-10-27 07:49:09Z, activation date 2025-10-27 07:49:09Z, and expiration date 2026-01-25 07:49:09Z.
+2025-10-27 07:49:09.699 +00:00 [WRN] No XML encryptor configured. Key {5771fe43-4f9c-409f-acdf-dbc895c94d1d} may be persisted to storage in unencrypted form.
+2025-10-27 07:49:09.703 +00:00 [INF] Writing data to file '/root/.aspnet/DataProtection-Keys/key-5771fe43-4f9c-409f-acdf-dbc895c94d1d.xml'.
+2025-10-27 07:49:09.718 +00:00 [WRN] Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:5141'.
+2025-10-27 07:49:09.763 +00:00 [INF] Now listening on: http://[::]:5141
+2025-10-27 07:49:09.764 +00:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-27 07:49:09.764 +00:00 [INF] Hosting environment: Development
+2025-10-27 07:49:09.764 +00:00 [INF] Content root path: /app
+2025-10-27 08:00:05.104 +00:00 [WRN] Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning
+2025-10-27 08:00:05.161 +00:00 [INF] User profile is available. Using '/root/.aspnet/DataProtection-Keys' as key repository; keys will not be encrypted at rest.
+2025-10-27 08:00:05.187 +00:00 [INF] Creating key {42ace530-4fbd-4273-a8cb-4f86cc54f67d} with creation date 2025-10-27 08:00:05Z, activation date 2025-10-27 08:00:05Z, and expiration date 2026-01-25 08:00:05Z.
+2025-10-27 08:00:05.205 +00:00 [WRN] No XML encryptor configured. Key {42ace530-4fbd-4273-a8cb-4f86cc54f67d} may be persisted to storage in unencrypted form.
+2025-10-27 08:00:05.210 +00:00 [INF] Writing data to file '/root/.aspnet/DataProtection-Keys/key-42ace530-4fbd-4273-a8cb-4f86cc54f67d.xml'.
+2025-10-27 08:00:05.222 +00:00 [WRN] Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:5141'.
+2025-10-27 08:00:05.274 +00:00 [INF] Now listening on: http://[::]:5141
+2025-10-27 08:00:05.275 +00:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-27 08:00:05.275 +00:00 [INF] Hosting environment: Development
+2025-10-27 08:00:05.275 +00:00 [INF] Content root path: /app
+2025-10-27 08:02:21.744 +00:00 [INF] Request starting HTTP/1.1 GET http://localhost:5141/swagger/v1/swagger.json - null null
+2025-10-27 08:02:21.817 +00:00 [INF] Request finished HTTP/1.1 GET http://localhost:5141/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 74.0335ms
+2025-10-27 08:06:06.369 +00:00 [INF] Request starting HTTP/1.1 GET http://escrowservice:5141/swagger/v1/swagger.json - null null
+2025-10-27 08:06:06.373 +00:00 [INF] Request finished HTTP/1.1 GET http://escrowservice:5141/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 4.3202ms
