@@ -17,7 +17,6 @@ namespace AuthService.Application.DTOs
         public string? AvatarUrl { get; set; }
 
         [StringLength(1000)]
-        public string? Bio { get; set; }
         // Address (simple string)
         public string? Address { get; set; }
     }

@@ -31,7 +31,6 @@ namespace AuthService.Web.Controllers
                 DisplayName = u.DisplayName,
                 Phone = u.Phone,
                 AvatarUrl = u.AvatarUrl,
-                Bio = u.Bio,
                 Address = u.Address,
                 Role = u.Role.ToString(),
                 IsActive = u.IsActive
@@ -55,7 +54,6 @@ namespace AuthService.Web.Controllers
                     DisplayName = user.DisplayName,
                     Phone = user.Phone,
                     AvatarUrl = user.AvatarUrl,
-                    Bio = user.Bio,
                     Address = user.Address,
                     Role = user.Role.ToString(),
                     IsActive = user.IsActive
@@ -104,7 +102,6 @@ namespace AuthService.Web.Controllers
                 DisplayName = updated.DisplayName,
                 Phone = updated.Phone,
                 AvatarUrl = updated.AvatarUrl,
-                Bio = updated.Bio,
                 Address = updated.Address,
                 Role = updated.Role.ToString(),
                 IsActive = updated.IsActive
@@ -133,7 +130,6 @@ namespace AuthService.Web.Controllers
                 DisplayName = user.DisplayName,
                 Phone = user.Phone,
                 AvatarUrl = user.AvatarUrl,
-                Bio = user.Bio,
                 Address = user.Address,
                 Role = user.Role.ToString(),
                 IsActive = user.IsActive

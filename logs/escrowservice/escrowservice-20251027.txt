@@ -38,3 +38,35 @@
 2025-10-27 08:06:06.369 +00:00 [INF] Request starting HTTP/1.1 GET http://escrowservice:5141/swagger/v1/swagger.json - null null
 2025-10-27 08:06:06.373 +00:00 [INF] Request finished HTTP/1.1 GET http://escrowservice:5141/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 4.3202ms
 2025-10-27 08:12:21.790 +00:00 [INF] Application is shutting down...
+2025-10-27 14:29:45.570 +00:00 [WRN] Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning
+2025-10-27 14:29:45.610 +00:00 [INF] User profile is available. Using '/root/.aspnet/DataProtection-Keys' as key repository; keys will not be encrypted at rest.
+2025-10-27 14:29:45.618 +00:00 [INF] Creating key {00c34dd5-fb20-4e4b-b7c4-351eea03f58e} with creation date 2025-10-27 14:29:45Z, activation date 2025-10-27 14:29:45Z, and expiration date 2026-01-25 14:29:45Z.
+2025-10-27 14:29:45.626 +00:00 [WRN] No XML encryptor configured. Key {00c34dd5-fb20-4e4b-b7c4-351eea03f58e} may be persisted to storage in unencrypted form.
+2025-10-27 14:29:45.629 +00:00 [INF] Writing data to file '/root/.aspnet/DataProtection-Keys/key-00c34dd5-fb20-4e4b-b7c4-351eea03f58e.xml'.
+2025-10-27 14:29:45.635 +00:00 [WRN] Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:5141'.
+2025-10-27 14:29:45.668 +00:00 [INF] Now listening on: http://[::]:5141
+2025-10-27 14:29:45.668 +00:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-27 14:29:45.669 +00:00 [INF] Hosting environment: Development
+2025-10-27 14:29:45.669 +00:00 [INF] Content root path: /app
+2025-10-27 14:34:15.526 +00:00 [INF] Application is shutting down...
+2025-10-27 14:34:28.551 +00:00 [WRN] Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning
+2025-10-27 14:34:28.576 +00:00 [INF] User profile is available. Using '/root/.aspnet/DataProtection-Keys' as key repository; keys will not be encrypted at rest.
+2025-10-27 14:34:28.583 +00:00 [INF] Creating key {f04e3453-7321-46d0-94d7-52b709c786d9} with creation date 2025-10-27 14:34:28Z, activation date 2025-10-27 14:34:28Z, and expiration date 2026-01-25 14:34:28Z.
+2025-10-27 14:34:28.594 +00:00 [WRN] No XML encryptor configured. Key {f04e3453-7321-46d0-94d7-52b709c786d9} may be persisted to storage in unencrypted form.
+2025-10-27 14:34:28.598 +00:00 [INF] Writing data to file '/root/.aspnet/DataProtection-Keys/key-f04e3453-7321-46d0-94d7-52b709c786d9.xml'.
+2025-10-27 14:34:28.607 +00:00 [WRN] Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:5141'.
+2025-10-27 14:34:28.639 +00:00 [INF] Now listening on: http://[::]:5141
+2025-10-27 14:34:28.640 +00:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-27 14:34:28.640 +00:00 [INF] Hosting environment: Development
+2025-10-27 14:34:28.640 +00:00 [INF] Content root path: /app
+2025-10-27 14:36:19.777 +00:00 [INF] Application is shutting down...
+2025-10-27 14:36:22.540 +00:00 [WRN] Storing keys in a directory '/root/.aspnet/DataProtection-Keys' that may not be persisted outside of the container. Protected data will be unavailable when container is destroyed. For more information go to https://aka.ms/aspnet/dataprotectionwarning
+2025-10-27 14:36:22.570 +00:00 [INF] User profile is available. Using '/root/.aspnet/DataProtection-Keys' as key repository; keys will not be encrypted at rest.
+2025-10-27 14:36:22.580 +00:00 [INF] Creating key {1a5eb54d-bd8d-4b76-8658-bbebc18eb854} with creation date 2025-10-27 14:36:22Z, activation date 2025-10-27 14:36:22Z, and expiration date 2026-01-25 14:36:22Z.
+2025-10-27 14:36:22.588 +00:00 [WRN] No XML encryptor configured. Key {1a5eb54d-bd8d-4b76-8658-bbebc18eb854} may be persisted to storage in unencrypted form.
+2025-10-27 14:36:22.590 +00:00 [INF] Writing data to file '/root/.aspnet/DataProtection-Keys/key-1a5eb54d-bd8d-4b76-8658-bbebc18eb854.xml'.
+2025-10-27 14:36:22.597 +00:00 [WRN] Overriding HTTP_PORTS '8080' and HTTPS_PORTS ''. Binding to values defined by URLS instead 'http://+:5141'.
+2025-10-27 14:36:22.640 +00:00 [INF] Now listening on: http://[::]:5141
+2025-10-27 14:36:22.640 +00:00 [INF] Application started. Press Ctrl+C to shut down.
+2025-10-27 14:36:22.640 +00:00 [INF] Hosting environment: Development
+2025-10-27 14:36:22.641 +00:00 [INF] Content root path: /app

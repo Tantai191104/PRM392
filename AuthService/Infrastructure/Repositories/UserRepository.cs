@@ -36,7 +36,6 @@ namespace AuthService.Infrastructure.Repositories
             if (dto.DisplayName != null) updates.Add(update.Set(u => u.DisplayName, dto.DisplayName));
             if (dto.Phone != null) updates.Add(update.Set(u => u.Phone, dto.Phone));
             if (dto.AvatarUrl != null) updates.Add(update.Set(u => u.AvatarUrl, dto.AvatarUrl));
-            if (dto.Bio != null) updates.Add(update.Set(u => u.Bio, dto.Bio));
 
             if (dto.Address != null)
             {
