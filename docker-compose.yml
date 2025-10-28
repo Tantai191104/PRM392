@@ -29,7 +29,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5133
-      - MongoSettings__ConnectionString=mongodb://mongo:27017
+      - MongoSettings__ConnectionString=mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
       - MongoSettings__DatabaseName=PRM392AuthDB
       - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
       - JwtSettings__Issuer=PRM392AuthService
@@ -53,7 +53,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5137
-      - MongoSettings__ConnectionString=mongodb://mongo:27017
+      - MongoSettings__ConnectionString=mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
       - MongoSettings__DatabaseName=PRM392ProductDB
       - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
       - JwtSettings__Issuer=PRM392AuthService
@@ -79,7 +79,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5139
-      - MongoSettings__ConnectionString=mongodb://mongo:27017
+      - MongoSettings__ConnectionString=mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
       - MongoSettings__DatabaseName=PRM392OrderDB
       - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
       - JwtSettings__Issuer=PRM392AuthService
@@ -107,7 +107,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5140
-      - MongoSettings__ConnectionString=mongodb://mongo:27017
+      - MongoSettings__ConnectionString=mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
       - MongoSettings__DatabaseName=PRM392MediaDB
       - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
       - JwtSettings__Issuer=PRM392AuthService
@@ -138,7 +138,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5141
-      - MongoSettings__ConnectionString=mongodb://mongo:27017
+      - MongoSettings__ConnectionString=mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
       - MongoSettings__DatabaseName=PRM392EscrowDB
       - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
       - JwtSettings__Issuer=PRM392AuthService
@@ -167,7 +167,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5142
-      - MongoSettings__ConnectionString=mongodb://mongo:27017
+      - MongoSettings__ConnectionString=mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
       - MongoSettings__DatabaseName=PRM392ChatDB
       - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
       - JwtSettings__Issuer=PRM392AuthService

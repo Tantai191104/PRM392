@@ -20,15 +20,6 @@ namespace ProductService.Application.DTOs
         public List<string> Images { get; set; } = new();
         public string Description { get; set; } = string.Empty;
     }
-
-    // Owner information returned from AuthService
-    public class OwnerDto
-    {
-        public string Id { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string Role { get; set; } = string.Empty;
-    }
-
     // Product response enriched with owner info
     public class ProductWithOwnerDto
     {
@@ -48,6 +39,7 @@ namespace ProductService.Application.DTOs
         public decimal Price { get; set; }
         public List<string> Images { get; set; } = new List<string>();
         public string Description { get; set; } = string.Empty;
+        public string OwnerId { get; set; } = string.Empty; // ID của owner để OrderService có thể lấy thông tin seller
         public OwnerDto Owner { get; set; } = new OwnerDto();
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

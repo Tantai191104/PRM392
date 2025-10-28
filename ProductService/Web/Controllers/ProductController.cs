@@ -37,7 +37,34 @@ namespace ProductService.Web.Controllers
             var (items, total) = await _service.GetFilteredProducts(
                 type, "Published", brand, voltage, cycleCount, location, warranty, page, pageSize);
 
-            return Ok(new { total, page, pageSize, items });
+            var client = _httpFactory.CreateClient("auth");
+            var enrichedItems = new List<ProductWithOwnerDto>();
+            foreach (var product in items)
+            {
+                var owner = await GetOwnerAsync(client, product.OwnerId);
+                enrichedItems.Add(new ProductWithOwnerDto
+                {
+                    Id = product.Id,
+                    Name = product.Name,
+                    Type = product.Type,
+                    Capacity = product.Capacity,
+                    Condition = product.Condition,
+                    Year = product.Year,
+                    Price = product.Price,
+                    Images = product.Images ?? new List<string>(),
+                    Description = product.Description,
+                    Status = product.Status,
+                    Brand = product.Brand,
+                    Voltage = product.Voltage,
+                    CycleCount = product.CycleCount,
+                    Location = product.Location,
+                    Warranty = product.Warranty,
+                    Owner = owner ?? new OwnerDto { FullName = null, Email = null, Phone = null },
+                    CreatedAt = product.CreatedAt,
+                    UpdatedAt = product.UpdatedAt
+                });
+            }
+            return Ok(new { total, page, pageSize, items = enrichedItems });
         }
 
         // 🔹 API lấy danh sách sản phẩm của người dùng đang đăng nhập
@@ -85,7 +112,8 @@ namespace ProductService.Web.Controllers
                 CycleCount = product.CycleCount,
                 Location = product.Location,
                 Warranty = product.Warranty,
-                Owner = owner ?? new OwnerDto { Id = product.OwnerId },
+                OwnerId = product.OwnerId, // Thêm OwnerId
+                Owner = owner ?? new OwnerDto { FullName = null, Email = null, Phone = null },
                 CreatedAt = product.CreatedAt,
                 UpdatedAt = product.UpdatedAt
             };
@@ -272,24 +300,14 @@ namespace ProductService.Web.Controllers
 
         // 🔹 Update product status
         [HttpPut("{id}/status")]
-        [Authorize]
+        [AllowAnonymous]
         public async Task<IActionResult> UpdateStatus(string id, [FromBody] UpdateStatusDto dto)
         {
             var product = await _service.GetById(id);
             if (product == null)
                 return NotFound();
 
-            var callerId = User?.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
-                           ?? User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
-                           ?? Request.Headers["X-User-Id"].FirstOrDefault();
-
-            var isAdmin = (User?.IsInRole("Admin") ?? false) || (User?.IsInRole("Staff") ?? false);
-
-            // Only owner or admin can update status
-            if (!isAdmin && callerId != product.OwnerId)
-                return Forbid("You are not authorized to update this product");
-
-            // Validate status transition
+            // Validate status
             var validStatuses = new[] { "Draft", "Pending", "Published", "InTransaction", "Sold", "Expired", "Rejected" };
             if (!validStatuses.Contains(dto.Status))
                 return BadRequest(new { success = false, message = "Invalid status" });
@@ -352,11 +370,29 @@ namespace ProductService.Web.Controllers
                 var response = await client.GetAsync($"/api/users/{ownerId}");
                 if (response.IsSuccessStatusCode)
                 {
-                    var owner = await response.Content.ReadFromJsonAsync<OwnerDto>();
+                    // Deserialize to a dynamic object to extract only needed fields
+                    var json = await response.Content.ReadAsStringAsync();
+                    using var doc = JsonDocument.Parse(json);
+                    var root = doc.RootElement;
+                    // Extract necessary fields (example: FullName, Email, Phone, AvatarUrl)
+                    var owner = new OwnerDto
+                    {
+                        FullName = root.TryGetProperty("fullName", out var fullNameProp) ? fullNameProp.GetString() : null,
+                        Email = root.TryGetProperty("email", out var emailProp) ? emailProp.GetString() : null,
+                        Phone = root.TryGetProperty("phone", out var phoneProp) ? phoneProp.GetString() : null,
+                    };
                     return owner;
                 }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"[Owner API] Status: {response.StatusCode}, Content: {errorContent}");
+                }
             }
-            catch { /* ignore errors */ }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Owner API] Exception: {ex.Message}");
+            }
             return null;
         }
     }

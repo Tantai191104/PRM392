@@ -1,0 +1,4 @@
+2025-10-28 02:53:52.331 +00:00 [INF] Request starting HTTP/1.1 GET http://escrowservice:5141/swagger/v1/swagger.json - null null
+2025-10-28 02:53:54.575 +00:00 [INF] Request finished HTTP/1.1 GET http://escrowservice:5141/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 2455.1925ms
+2025-10-28 02:57:23.064 +00:00 [INF] Request starting HTTP/1.1 GET http://escrowservice:5141/swagger/v1/swagger.json - null null
+2025-10-28 02:57:23.091 +00:00 [INF] Request finished HTTP/1.1 GET http://escrowservice:5141/swagger/v1/swagger.json - 200 null application/json;charset=utf-8 26.6165ms
