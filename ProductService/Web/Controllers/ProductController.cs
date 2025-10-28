@@ -159,8 +159,61 @@ namespace ProductService.Web.Controllers
                 OwnerId = ownerId
             };
 
+            // Call AI service to evaluate and store embedded data
+            PriceSuggestionResult? aiSuggestion = null;
+            try
+            {
+                var aiClient = _httpFactory.CreateClient("ai");
+                var aiInput = MapToAiFeatures(dto, product.Id);
+                // BaseAddress is http://apigateway:5016, so full path is /ai/api/BatteryPrediction/predict
+                using var resp = await aiClient.PostAsJsonAsync("/ai/api/BatteryPrediction/predict", aiInput);
+                if (resp.IsSuccessStatusCode)
+                {
+                    aiSuggestion = await resp.Content.ReadFromJsonAsync<PriceSuggestionResult>();
+                    if (aiSuggestion != null)
+                    {
+                        // Only store SOH (State of Health) in product
+                        product.SOH = aiSuggestion.EstimatedRemainingPercent;
+                        // Keep user's input price, don't override with AI suggestion
+                        // AI suggested price is returned separately for user reference
+                    }
+
+                    // Add training data with user's actual price (fire and forget)
+                    if (product.Price > 0 && !string.IsNullOrWhiteSpace(product.Brand))
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                var trainingRequest = new
+                                {
+                                    batteryFeatures = aiInput,
+                                    actualStatus = aiSuggestion?.Status ?? "Good",
+                                    actualPrice = (float)product.Price
+                                };
+                                await aiClient.PostAsJsonAsync("/ai/api/BatteryPrediction/add-training", trainingRequest);
+                                Console.WriteLine($"[ProductService] Added training data for product {product.Id} with price ${product.Price}");
+                            }
+                            catch (Exception trainingEx)
+                            {
+                                Console.WriteLine($"[ProductService] Failed to add training data: {trainingEx.Message}");
+                            }
+                        });
+                    }
+                }
+                else
+                {
+                    var err = await resp.Content.ReadAsStringAsync();
+                    Console.WriteLine($"[AI Predict] Status: {resp.StatusCode}, Body: {err}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AI Predict] Exception: {ex.Message}");
+            }
+
             await _service.Create(product);
-            return Ok(product);
+            return Ok(new { product, aiSuggestion });
         }
 
         // 🔹 Cập nhật product
@@ -296,6 +349,72 @@ namespace ProductService.Web.Controllers
                 };
             }
             return result;
+        }
+
+        // 🔹 Helper: Map ProductDto to AI features
+        private static BatteryFeaturesDto MapToAiFeatures(ProductDto dto, string? productId = null)
+        {
+            // Parse voltage numeric
+            float voltage = 0;
+            if (!string.IsNullOrWhiteSpace(dto.Voltage))
+            {
+                var digits = new string(dto.Voltage.Where(c => char.IsDigit(c) || c == '.' || c == ',').ToArray());
+                float.TryParse(digits.Replace(',', '.'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out voltage);
+            }
+
+            // Parse capacity to mAh
+            int capacityMah = 0;
+            if (!string.IsNullOrWhiteSpace(dto.Capacity))
+            {
+                var digits = new string(dto.Capacity.Where(c => char.IsDigit(c)).ToArray());
+                int.TryParse(digits, out capacityMah);
+                if (capacityMah == 0 && digits.Length > 0)
+                {
+                    int.TryParse(digits, out capacityMah);
+                }
+            }
+
+            // Physical condition score from text condition
+            float conditionScore = dto.Condition?.ToLowerInvariant() switch
+            {
+                var s when s != null && s.Contains("new") => 9.5f,
+                var s when s != null && (s.Contains("like new") || s.Contains("excellent")) => 8.5f,
+                var s when s != null && (s.Contains("used") || s.Contains("good")) => 6.5f,
+                var s when s != null && (s.Contains("poor") || s.Contains("bad") || s.Contains("fair")) => 3.5f,
+                _ => 6.0f
+            };
+
+            // Age in months from year
+            int currentYear = DateTime.UtcNow.Year;
+            int ageMonths = Math.Max(0, (currentYear - Math.Max(0, dto.Year)) * 12);
+
+            // Remaining capacity heuristic from cycles + condition
+            float baseRemaining = 100f - (dto.CycleCount * 0.03f);
+            if (conditionScore >= 9) baseRemaining += 2;
+            else if (conditionScore <= 4) baseRemaining -= 5;
+            baseRemaining = Math.Clamp(baseRemaining, 10f, 100f);
+
+            return new BatteryFeaturesDto
+            {
+                ProductId = productId,
+                Name = dto.Name ?? string.Empty,
+                Type = dto.Type ?? string.Empty,
+                Capacity = dto.Capacity ?? string.Empty,
+                Condition = dto.Condition ?? string.Empty,
+                Year = dto.Year,
+                Description = dto.Description ?? string.Empty,
+                Location = dto.Location ?? string.Empty,
+                Warranty = dto.Warranty ?? string.Empty,
+                Brand = dto.Brand ?? string.Empty,
+                Voltage = dto.Voltage ?? string.Empty,
+                CycleCount = dto.CycleCount,
+                RemainingCapacityPercent = baseRemaining,
+                VoltageNumeric = voltage,
+                AgeMonths = ageMonths,
+                TemperatureC = 30f,
+                CapacityMah = capacityMah,
+                PhysicalConditionScore = conditionScore
+            };
         }
 
         // 🔹 Update product status

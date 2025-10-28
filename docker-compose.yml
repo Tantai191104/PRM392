@@ -58,6 +58,7 @@ services:
       - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
       - JwtSettings__Issuer=PRM392AuthService
       - JwtSettings__Audience=PRM392Clients
+      - Downstream__AiBaseUrl=http://apigateway:5016/ai
     ports:
       - "5137:5137"
     networks:
@@ -178,6 +179,53 @@ services:
       - prm392_network
 
   # =============================
+  # � Python Embedding Service (Local sentence-transformers)
+  # =============================
+  embedding:
+    build:
+      context: ./AiService/PythonEmbedding
+      dockerfile: Dockerfile
+    image: tantai231204/prm392_embedding:latest
+    container_name: prm392_embedding
+    ports:
+      - "5555:5555"
+    networks:
+      - prm392_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5555/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - embedding-model-cache:/root/.cache
+
+  # =============================
+  # �🤖 AI Service (Battery Prediction)
+  # =============================
+  aiservice:
+    build:
+      context: .
+      dockerfile: AiService/Dockerfile
+    image: tantai231204/prm392_aiservice:latest
+    container_name: prm392_aiservice
+    depends_on:
+      - mongo
+      - embedding
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5143
+      - Mongo__ConnectionString=mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
+      - Mongo__Database=AiServiceDb
+      - Mongo__PredictionsCollection=predictions
+      - Mongo__TrainingCollection=training
+      - Mongo__VectorsCollection=battery_vectors
+      - LocalEmbedding__ServiceUrl=http://embedding:5555
+    ports:
+      - "5143:5143"
+    networks:
+      - prm392_network
+
+  # =============================
   # 🚪 API Gateway (YARP)
   # =============================
   apigateway:
@@ -193,6 +241,7 @@ services:
       - mediaservice
       - escrowservice
       - chatservice
+      - aiservice
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5016
@@ -225,6 +274,7 @@ services:
 volumes:
   mongo_data:
   media_uploads:
+  embedding-model-cache:
 
 networks:
   prm392_network:

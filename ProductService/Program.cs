@@ -115,6 +115,14 @@ builder.Services.AddHttpClient("auth", client =>
     client.BaseAddress = new Uri(builder.Configuration.GetValue<string>("Downstream:AuthBaseUrl") ?? "http://authservice:5133");
 });
 
+// Register an HttpClient to call AiService for battery prediction/price suggestion
+builder.Services.AddHttpClient("ai", client =>
+{
+    // Call through API Gateway without /ai prefix in BaseAddress
+    // Full URL will be: http://apigateway:5016 + /ai/api/BatteryPrediction/predict
+    client.BaseAddress = new Uri(builder.Configuration.GetValue<string>("Downstream:AiBaseUrl") ?? "http://apigateway:5016");
+});
+
 // ✅ ===== CORS phải đăng ký trước khi Build =====
 builder.Services.AddCors(options =>
 {

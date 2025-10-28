@@ -1,0 +1,31 @@
+### Predict
+POST https://localhost:5001/api/BatteryPrediction/predict
+Content-Type: application/json
+
+{
+  "remainingCapacityPercent": 75,
+  "voltage": 3.8,
+  "chargeCycles": 250,
+  "ageMonths": 12,
+  "temperatureC": 30,
+  "brand": "Apple",
+  "capacityMah": 2800,
+  "physicalConditionScore": 8
+}
+
+### Train (add labeled sample)
+POST https://localhost:5001/api/BatteryPrediction/train
+Content-Type: application/json
+
+{
+  "remainingCapacityPercent": 60,
+  "voltage": 3.7,
+  "chargeCycles": 350,
+  "ageMonths": 18,
+  "temperatureC": 33,
+  "brand": "Xiaomi",
+  "capacityMah": 4000,
+  "physicalConditionScore": 6,
+  "labeledStatus": "Fair",
+  "labeledPrice": 115
+}

@@ -176,7 +176,13 @@ app.UseSwaggerUI(c =>
     // Build a sorted list of downstream services to show in the UI
     var downstreamList = downstream
         .OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
-        .Select(kv => new { Key = kv.Key, Url = $"/api/{kv.Key}/swagger/v1/swagger.json" })
+        .Select(kv => new { 
+            Key = kv.Key, 
+            // Special case for AI service - it uses /ai prefix instead of /api/ai
+            Url = kv.Key.Equals("ai", StringComparison.OrdinalIgnoreCase) 
+                ? "/ai/swagger/v1/swagger.json" 
+                : $"/api/{kv.Key}/swagger/v1/swagger.json" 
+        })
         .ToList();
 
     // Friendly label function (Title case, replace '-' with ' ')
