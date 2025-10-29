@@ -1,5 +1,7 @@
 using ProductService.Domain.Entities;
-using ProductService.Infrastructure.Repositories; // namespace chính xác
+using ProductService.Infrastructure.Repositories;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace ProductService.Application.Services
 {
@@ -12,19 +14,36 @@ namespace ProductService.Application.Services
             _repo = repo;
         }
 
+        public async Task<List<Product>> GetByOwnerId(string ownerId) =>
+            await _repo.GetByOwnerIdAsync(ownerId);
+
         public async Task<Product> Create(Product product)
         {
             await _repo.CreateAsync(product);
             return product;
         }
 
-        public async Task<List<Product>> GetAll() => await _repo.GetAllAsync();
-        public async Task<Product?> GetById(string id) => await _repo.GetByIdAsync(id);
-        public async Task Update(Product product)
-        {
-            product.UpdatedAt = DateTime.UtcNow;
+        public async Task<List<Product>> GetAll() =>
+            await _repo.GetAllAsync();
+
+        public async Task<Product?> GetById(string id) =>
+            await _repo.GetByIdAsync(id);
+
+        public async Task Update(Product product) =>
             await _repo.UpdateAsync(product);
+
+        public async Task Delete(string id) =>
+            await _repo.DeleteAsync(id);
+
+        // ✅ Giữ nguyên tên cũ nhưng gọi repository tối ưu hơn
+        public async Task<(List<Product>, int)> GetFilteredProducts(
+            string? type, string? status, string? brand, string? voltage, int? cycleCount,
+            string? location, string? warranty, int page, int pageSize)
+        {
+            return await _repo.GetFilteredAsync(
+                type, status, brand, voltage, cycleCount,
+                location, warranty, page, pageSize
+            );
         }
-        public async Task Delete(string id) => await _repo.DeleteAsync(id);
     }
 }

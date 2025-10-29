@@ -1,49 +1,20 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace OrderService.Application.DTOs
 {
-    public class CreateOrderDto
+    public class OrderDto
     {
-        [Required(ErrorMessage = "UserId is required")]
-        [Range(1, int.MaxValue, ErrorMessage = "UserId must be greater than 0")]
-        public int UserId { get; set; }
-        
-        [Required(ErrorMessage = "ProductId is required")]
-        [Range(1, int.MaxValue, ErrorMessage = "ProductId must be greater than 0")]
-        public int ProductId { get; set; }
-        
-        [Required(ErrorMessage = "Quantity is required")]
-        [Range(1, 100, ErrorMessage = "Quantity must be between 1 and 100")]
-        public int Quantity { get; set; }
-    }
+        // ID sản phẩm được mua
+        public string ProductId { get; set; } = string.Empty;
 
-    public class OrderResponseDto
-    {
-        public string Id { get; set; } = string.Empty;
-        public int UserId { get; set; }
-        public string UserEmail { get; set; } = string.Empty;
-        public int ProductId { get; set; }
-        public string ProductName { get; set; } = string.Empty;
-        public decimal ProductPrice { get; set; }
-        public int Quantity { get; set; }
-        public decimal TotalAmount { get; set; }
-        public string Status { get; set; } = string.Empty;
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
-    }
+        // Phương thức thanh toán: "Cash", "BankTransfer", "COD"
+        public string PaymentMethod { get; set; } = "Cash";
 
-    public class UserDto
-    {
-        public int Id { get; set; }
-        public string Email { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-    }
+        // Địa chỉ giao hàng của người mua
+        public string ShippingAddress { get; set; } = string.Empty;
 
-    public class ProductDto
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public decimal Price { get; set; }
-        public int Stock { get; set; }
+        // Ghi chú của khách hàng (ví dụ: "Giao buổi sáng", "Không gọi khi giao")
+        public string Notes { get; set; } = string.Empty;
+
+        // Phí ship (mặc định 30000 VNĐ)
+        public decimal ShippingFee { get; set; } = 30000;
     }
 }

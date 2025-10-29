@@ -2,8 +2,22 @@ namespace AuthService.Application.DTOs
 {
     public class RegisterDto
     {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.EmailAddress]
         public required string Email { get; set; }
+
+        [System.ComponentModel.DataAnnotations.MinLength(8)]
         public required string Password { get; set; }
+
+        [System.ComponentModel.DataAnnotations.StringLength(200)]
+        public string? FullName { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Phone]
+        public string? Phone { get; set; }
+
+        // Simple address string
+        public string? Address { get; set; }
+
     }
 
     public class LoginDto
@@ -16,5 +30,19 @@ namespace AuthService.Application.DTOs
     {
         public string AccessToken { get; set; } = string.Empty;
         public string RefreshToken { get; set; } = string.Empty;
+    }
+
+    public class LoginResultDto
+    {
+    public TokenResponseDto? Tokens { get; set; }
+    public UserResponseDto? User { get; set; }
+    public string? Error { get; set; }
+    }
+
+    public class RegisterResultDto
+    {
+        public bool Success { get; set; }
+        public string? Error { get; set; }
+        public UserResponseDto? User { get; set; }
     }
 }

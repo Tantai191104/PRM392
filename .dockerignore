@@ -1,10 +1,94 @@
+# =========================
+# 🧱 Build & Binary
+# =========================
 bin/
 obj/
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+
+# =========================
+# 🧰 IDE & Editor configs
+# =========================
 .vscode/
-.git/
+.idea/
 *.user
 *.suo
-**/bin/
-**/obj/
-**/*.db
-**/*.log
+*.userosscache
+*.sln.docstates
+
+# =========================
+# 🧪 Logs, Databases, Cache
+# =========================
+*.log
+*.tlog
+*.db
+*.sqlite
+*.db-shm
+*.db-wal
+*.pid
+*.seed
+*.cache
+*.tmp
+logs/
+data/
+storage/
+volumes/
+dump/
+
+# =========================
+# ⚙️ Environment & Config
+# =========================
+.env
+.env.*
+*.config.local
+*.development.json
+*.production.json
+secrets.json
+config/*.local.json
+
+# =========================
+# 🐳 Docker / Compose
+# =========================
+.docker/
+docker-compose.override.yml
+docker-compose.debug.yml
+**/Dockerfile.local
+**/Dockerfile.dev
+**/Dockerfile.backup
+
+# =========================
+# ☁️ Kubernetes / Helm
+# =========================
+k8s/tmp/
+k8s/test/
+helm-chart/
+*.helmignore
+
+# =========================
+# 🧾 Misc / System files
+# =========================
+*.bak
+*.swp
+*.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# 🪣 Publish outputs
+# =========================
+publish/
+dist/
+out/
+coverage/
+
+# =========================
+# 🔒 NodeJS Frontend (nếu có)
+# =========================
+node_modules/
+wwwroot/lib/
+wwwroot/dist/

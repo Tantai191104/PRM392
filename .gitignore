@@ -1,0 +1,33 @@
+# Ignore build output (all projects)
+**/bin/
+**/obj/
+bin/
+obj/
+# Ignore user-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+# Ignore IDE/editor settings
+.vscode/
+.idea/
+.vs/
+# Ignore logs
+*.log
+# Ignore generated files
+*.AssemblyInfo.cs
+# Ignore cache
+*.cache
+# Ignore Docker artifacts
+docker-compose.override.yml
+# Ignore environment files
+.env
+# Ignore test results
+TestResults/
+# Ignore NuGet packages
+*.nupkg
+# Ignore coverage reports
+coverage/
+# Ignore other temp files
+*.tmp
+*.temp

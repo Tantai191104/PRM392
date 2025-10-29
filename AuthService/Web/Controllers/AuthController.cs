@@ -1,3 +1,4 @@
+using SharedKernel.Constants;
 using Microsoft.AspNetCore.Mvc;
 using AuthService.Application.Services;
 using AuthService.Application.DTOs;
@@ -18,16 +19,25 @@ namespace AuthService.Web.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
-            var user = await _authService.Register(dto.Email, dto.Password);
-            return Ok(new { success = true, message = "User created", data = user });
+            var result = await _authService.Register(dto);
+            if (!result.Success)
+                return BadRequest(new { success = false, code = ErrorCodes.BusinessRule, message = result.Error });
+
+            return Ok(new { success = true, message = "User created", user = result.User });
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
-            var tokens = await _authService.Login(dto.Email, dto.Password);
-            if (tokens == null) return Unauthorized(new { success = false, message = "Invalid credentials" });
-            Response.Cookies.Append("refreshToken", tokens.RefreshToken, new CookieOptions
+            var result = await _authService.Login(dto.Email, dto.Password);
+            if (result == null)
+                return Unauthorized(new { success = false, code = ErrorCodes.Unauthorized, message = "Invalid credentials" });
+
+            if (!string.IsNullOrEmpty(result.Error))
+                return Unauthorized(new { success = false, code = ErrorCodes.Unauthorized, message = result.Error });
+
+            // set refresh token cookie
+            Response.Cookies.Append("refreshToken", result.Tokens!.RefreshToken, new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
@@ -35,13 +45,13 @@ namespace AuthService.Web.Controllers
                 Expires = DateTime.UtcNow.AddDays(7)
             });
 
-            // Return accessToken and refreshToken at top-level for easier client parsing
+            // Return structured response: tokens + sanitized user (no passwordHash)
             return Ok(new
             {
                 success = true,
                 message = "Login success",
-                accessToken = tokens.AccessToken,
-                refreshToken = tokens.RefreshToken
+                tokens = result.Tokens,
+                user = result.User
             });
         }
 
@@ -49,10 +59,11 @@ namespace AuthService.Web.Controllers
         public async Task<IActionResult> RefreshToken()
         {
             if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken))
-                return Unauthorized(new { success = false, message = "No refresh token" });
+                return Unauthorized(new { success = false, code = ErrorCodes.Unauthorized, message = "No refresh token" });
 
             var tokens = await _authService.RefreshToken(refreshToken);
-            if (tokens == null) return Unauthorized(new { success = false, message = "Invalid refresh token" });
+            if (tokens == null)
+                return Unauthorized(new { success = false, code = ErrorCodes.Unauthorized, message = "Invalid refresh token" });
 
             Response.Cookies.Append("refreshToken", tokens.RefreshToken, new CookieOptions
             {

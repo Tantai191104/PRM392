@@ -9,7 +9,7 @@ services:
     container_name: prm392_mongo
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - mongo_data:/data/db
     networks:
@@ -29,7 +29,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5133
-      - MongoSettings__ConnectionString=mongodb://mongo:27017
+      - MongoSettings__ConnectionString=mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
       - MongoSettings__DatabaseName=PRM392AuthDB
       - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
       - JwtSettings__Issuer=PRM392AuthService
@@ -53,11 +53,12 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5137
-      - MongoSettings__ConnectionString=mongodb://mongo:27017
+      - MongoSettings__ConnectionString=mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
       - MongoSettings__DatabaseName=PRM392ProductDB
       - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
       - JwtSettings__Issuer=PRM392AuthService
       - JwtSettings__Audience=PRM392Clients
+      - Downstream__AiBaseUrl=http://apigateway:5016/ai
     ports:
       - "5137:5137"
     networks:
@@ -79,7 +80,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5139
-      - MongoSettings__ConnectionString=mongodb://mongo:27017
+      - MongoSettings__ConnectionString=mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
       - MongoSettings__DatabaseName=PRM392OrderDB
       - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
       - JwtSettings__Issuer=PRM392AuthService
@@ -94,7 +95,138 @@ services:
       - prm392_network
 
   # =============================
-  # �🚪 API Gateway (YARP)
+  # 📸 Media Service
+  # =============================
+  mediaservice:
+    build:
+      context: .
+      dockerfile: MediaService/Dockerfile
+    image: tantai231204/prm392_mediaservice:latest
+    container_name: prm392_mediaservice
+    depends_on:
+      - mongo
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5140
+      - MongoSettings__ConnectionString=mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
+      - MongoSettings__DatabaseName=PRM392MediaDB
+      - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
+      - JwtSettings__Issuer=PRM392AuthService
+      - JwtSettings__Audience=PRM392Clients
+      - Storage__UploadPath=/app/uploads
+      - Storage__BaseUrl=http://mediaservice:5140
+      - Storage__MaxFileSizeMB=10
+    ports:
+      - "5140:5140"
+    volumes:
+      - media_uploads:/app/uploads
+    networks:
+      - prm392_network
+
+  # =============================
+  # 💰 Escrow Service (with Saga Pattern)
+  # =============================
+  escrowservice:
+    build:
+      context: .
+      dockerfile: EscrowService/Dockerfile
+    image: tantai231204/prm392_escrowservice:latest
+    container_name: prm392_escrowservice
+    depends_on:
+      - mongo
+      - productservice
+      - orderservice
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5141
+      - MongoSettings__ConnectionString=mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
+      - MongoSettings__DatabaseName=PRM392EscrowDB
+      - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
+      - JwtSettings__Issuer=PRM392AuthService
+      - JwtSettings__Audience=PRM392Clients
+      - ExternalServices__ProductService__BaseUrl=http://productservice:5137
+      - ExternalServices__OrderService__BaseUrl=http://orderservice:5139
+      - ExternalServices__AuthService__BaseUrl=http://authservice:5133
+    ports:
+      - "5141:5141"
+    volumes:
+      - ./logs/escrowservice:/app/logs
+    networks:
+      - prm392_network
+
+  # =============================
+  # 💬 Chat Service (with SignalR)
+  # =============================
+  chatservice:
+    build:
+      context: .
+      dockerfile: ChatService/Dockerfile
+    image: tantai231204/prm392_chatservice:latest
+    container_name: prm392_chatservice
+    depends_on:
+      - mongo
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5142
+      - MongoSettings__ConnectionString=mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
+      - MongoSettings__DatabaseName=PRM392ChatDB
+      - JwtSettings__SecretKey=VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
+      - JwtSettings__Issuer=PRM392AuthService
+      - JwtSettings__Audience=PRM392Clients
+    ports:
+      - "5142:5142"
+    networks:
+      - prm392_network
+
+  # =============================
+  # � Python Embedding Service (Local sentence-transformers)
+  # =============================
+  embedding:
+    build:
+      context: ./AiService/PythonEmbedding
+      dockerfile: Dockerfile
+    image: tantai231204/prm392_embedding:latest
+    container_name: prm392_embedding
+    ports:
+      - "5555:5555"
+    networks:
+      - prm392_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5555/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - embedding-model-cache:/root/.cache
+
+  # =============================
+  # �🤖 AI Service (Battery Prediction)
+  # =============================
+  aiservice:
+    build:
+      context: .
+      dockerfile: AiService/Dockerfile
+    image: tantai231204/prm392_aiservice:latest
+    container_name: prm392_aiservice
+    depends_on:
+      - mongo
+      - embedding
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5143
+      - Mongo__ConnectionString=mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
+      - Mongo__Database=AiServiceDb
+      - Mongo__PredictionsCollection=predictions
+      - Mongo__TrainingCollection=training
+      - Mongo__VectorsCollection=battery_vectors
+      - LocalEmbedding__ServiceUrl=http://embedding:5555
+    ports:
+      - "5143:5143"
+    networks:
+      - prm392_network
+
+  # =============================
+  # 🚪 API Gateway (YARP)
   # =============================
   apigateway:
     build:
@@ -106,6 +238,10 @@ services:
       - authservice
       - productservice
       - orderservice
+      - mediaservice
+      - escrowservice
+      - chatservice
+      - aiservice
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5016
@@ -116,12 +252,19 @@ services:
       - DOWNSTREAMSWAGGER_AUTH=http://authservice:5133
       - DOWNSTREAMSWAGGER_PRODUCTS=http://productservice:5137
       - DOWNSTREAMSWAGGER_ORDERS=http://orderservice:5139
+      - DOWNSTREAMSWAGGER_MEDIA=http://mediaservice:5140
+      - DOWNSTREAMSWAGGER_ESCROW=http://escrowservice:5141
+      - DOWNSTREAMSWAGGER_ESCROWS=http://escrowservice:5141
+      - DOWNSTREAMSWAGGER_CHAT=http://chatservice:5142
+      - DOWNSTREAMSWAGGER_CHATS=http://chatservice:5142
       # Gateway header forwarding options
       - APIGATEWAY_FORWARDALLHEADERS=false
       - APIGATEWAY_FORWARDAUTH=true
       - Gateway__CorsAllowOrigins=http://localhost:3000;http://localhost:5173;http://192.168.1.10:8080
+    volumes:
+      - ./APIGateway/appsettings.json:/app/appsettings.json:ro
     ports:
-      - "5016:5016"
+      - "5000:5016"
     networks:
       - prm392_network
 
@@ -130,6 +273,8 @@ services:
 # =============================
 volumes:
   mongo_data:
+  media_uploads:
+  embedding-model-cache:
 
 networks:
   prm392_network:

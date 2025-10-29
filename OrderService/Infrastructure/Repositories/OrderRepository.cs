@@ -9,7 +9,7 @@ namespace OrderService.Infrastructure.Repositories
     {
         Task<IEnumerable<Order>> GetAllAsync();
         Task<Order?> GetByIdAsync(string id);
-        Task<IEnumerable<Order>> GetByUserIdAsync(int userId);
+        Task<IEnumerable<Order>> GetByUserIdAsync(string userId);
         Task<Order> CreateAsync(Order order);
         Task<Order> UpdateAsync(Order order);
         Task<bool> DeleteAsync(string id);
@@ -36,9 +36,9 @@ namespace OrderService.Infrastructure.Repositories
             return await _orders.Find(x => x.Id == id).FirstOrDefaultAsync();
         }
 
-        public async Task<IEnumerable<Order>> GetByUserIdAsync(int userId)
+        public async Task<IEnumerable<Order>> GetByUserIdAsync(string userId)
         {
-            return await _orders.Find(x => x.UserId == userId).ToListAsync();
+            return await _orders.Find(x => x.Buyer.Id == userId || x.Seller.Id == userId).ToListAsync();
         }
 
         public async Task<Order> CreateAsync(Order order)

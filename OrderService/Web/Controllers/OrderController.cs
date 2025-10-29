@@ -3,109 +3,213 @@ using Microsoft.AspNetCore.Authorization;
 using OrderService.Application.DTOs;
 using OrderService.Application.Services;
 using System.Security.Claims;
+using OrderService.Domain.Entities;
 
 namespace OrderService.Web.Controllers
 {
     [ApiController]
     [Route("api/orders")]
-    [Authorize]
     public class OrderController : ControllerBase
     {
         private readonly IOrderAppService _orderAppService;
-        private readonly ILogger<OrderController> _logger;
 
-        public OrderController(IOrderAppService orderAppService, ILogger<OrderController> logger)
+        public OrderController(IOrderAppService orderAppService)
         {
             _orderAppService = orderAppService;
-            _logger = logger;
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto dto)
+        [Authorize]
+        public async Task<IActionResult> CreateOrder([FromBody] OrderDto dto)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(userId))
+                return Unauthorized(new { success = false, message = "Invalid or missing user token" });
+
+            if (string.IsNullOrWhiteSpace(dto.ProductId))
+                return BadRequest(new { success = false, message = "ProductId is required" });
+
             try
             {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(ModelState);
-                }
+                var product = await _orderAppService.GetProductForOrderAsync(dto.ProductId);
+                if (product == null)
+                    return BadRequest(new { success = false, message = "Product not found" });
 
-                var result = await _orderAppService.CreateOrderAsync(dto);
-                _logger.LogInformation("Order created successfully: {OrderId}", result.Id);
-                
-                return CreatedAtAction(nameof(GetOrderById), new { id = result.Id }, result);
+                if (product.Status != "Published")
+                    return BadRequest(new { success = false, message = "Product is not available for ordering" });
+
+                // Kiểm tra người dùng không được mua sản phẩm của chính mình
+                if (product.OwnerId == userId)
+                    return BadRequest(new { success = false, message = "You cannot order your own product" });
+
+                var result = await _orderAppService.CreateOrderAsync(dto, userId);
+                return Ok(new { success = true, message = "Order created successfully", data = result });
             }
-            catch (ArgumentException ex)
+            catch (MongoDB.Driver.MongoWriteException ex)
             {
-                _logger.LogWarning(ex, "Invalid argument when creating order");
-                return BadRequest(ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                _logger.LogWarning(ex, "Invalid operation when creating order");
-                return BadRequest(ex.Message);
+                Console.WriteLine($"MongoDB Write Error: {ex.Message}");
+                Console.WriteLine($"WriteError: {ex.WriteError}");
+                return StatusCode(500, new { success = false, message = ex.Message, details = ex.WriteError?.Message });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating order");
-                return StatusCode(500, "An error occurred while creating the order");
+                Console.WriteLine($"Error creating order: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetOrders()
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllOrders([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            try
+            if (page < 1) page = 1;
+            if (pageSize < 1 || pageSize > 100) pageSize = 10;
+
+            var (orders, totalCount) = await _orderAppService.GetAllOrdersPagedAsync(page, pageSize);
+            var response = new
             {
-                var orders = await _orderAppService.GetOrdersAsync();
-                return Ok(orders);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error retrieving orders");
-                return StatusCode(500, "An error occurred while retrieving orders");
-            }
+                total = totalCount,
+                page,
+                pageSize,
+                totalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                items = orders
+            };
+            return Ok(response);
         }
 
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<IActionResult> GetOrderById(string id)
         {
+            var order = await _orderAppService.GetOrderByIdAsync(id);
+            if (order == null)
+                return NotFound(new { success = false, message = $"Order with ID {id} not found" });
+
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var isAdmin = User.IsInRole("Admin");
+
+            if (!isAdmin && userId != order.Buyer.Id && userId != order.Seller.Id)
+                return Forbid();
+
+            return Ok(order);
+        }
+
+        [HttpGet("buyer")]
+        [Authorize]
+        public async Task<IActionResult> GetMyOrdersAsBuyer()
+        {
+            var buyerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(buyerId))
+                return Unauthorized();
+
+            var orders = await _orderAppService.GetOrdersByBuyerAsync(buyerId);
+            return Ok(orders);
+        }
+
+        [HttpGet("seller")]
+        [Authorize]
+        public async Task<IActionResult> GetMyOrdersAsSeller()
+        {
+            var sellerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(sellerId))
+                return Unauthorized();
+
+            var orders = await _orderAppService.GetOrdersBySellerAsync(sellerId);
+            return Ok(orders);
+        }
+
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Admin,Staff")]
+        public async Task<IActionResult> UpdateOrderStatus(string id, [FromBody] UpdateOrderStatusDto dto)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Status))
+                return BadRequest(new { success = false, message = "Status is required" });
+
+            var order = await _orderAppService.GetOrderByIdAsync(id);
+            if (order == null)
+                return NotFound(new { success = false, message = $"Order with ID {id} not found" });
+
+            if (!Enum.TryParse(dto.Status, out OrderStatus parsedStatus))
+                return BadRequest(new { success = false, message = "Invalid status value" });
+
+            if (!Enum.TryParse<OrderStatus>(order.Status, out var currentStatus))
+                return BadRequest(new { success = false, message = "Invalid current order status" });
+
+            if (!IsValidStatusTransition(currentStatus, parsedStatus))
+                return BadRequest(new { success = false, message = $"Cannot change status from {order.Status} to {parsedStatus}" });
+
             try
             {
-                var order = await _orderAppService.GetOrderByIdAsync(id);
-                if (order == null)
-                {
-                    return NotFound($"Order with ID {id} not found");
-                }
-                return Ok(order);
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userName = User.Identity?.Name ?? "Unknown";
+
+                if (string.IsNullOrWhiteSpace(userId))
+                    return Unauthorized(new { success = false, message = "Missing or invalid user ID" });
+
+                var updated = await _orderAppService.UpdateOrderStatusAsync(id, parsedStatus, userId, userName);
+
+                return updated
+                    ? Ok(new { success = true, message = "Order status updated successfully" })
+                    : BadRequest(new { success = false, message = "Failed to update order status" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving order with ID: {OrderId}", id);
-                return StatusCode(500, "An error occurred while retrieving the order");
+                return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
 
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetOrdersByUserId(int userId)
+        [HttpPost("{id}/cancel")]
+        [Authorize]
+        public async Task<IActionResult> CancelOrder(string id)
         {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userName = User.Identity?.Name ?? "Unknown";
+
+            if (string.IsNullOrWhiteSpace(userId))
+                return Unauthorized();
+
             try
             {
-                // Check if user is requesting their own orders or is admin
-                var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (currentUserId != userId.ToString() && !User.IsInRole("Admin"))
-                {
-                    return Forbid("You can only view your own orders");
-                }
+                var cancelled = await _orderAppService.CancelOrderAsync(id, userId, userName);
 
-                var orders = await _orderAppService.GetOrdersByUserIdAsync(userId);
-                return Ok(orders);
+                if (cancelled)
+                    return Ok(new { success = true, message = "Order cancelled successfully" });
+                else
+                    return BadRequest(new { success = false, message = "Failed to cancel order" });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { success = false, message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving orders for user: {UserId}", userId);
-                return StatusCode(500, "An error occurred while retrieving orders");
+                return StatusCode(500, new { success = false, message = ex.Message });
             }
+        }
+
+        private bool IsValidStatusTransition(OrderStatus current, OrderStatus next)
+        {
+            return current switch
+            {
+                OrderStatus.Pending => next is OrderStatus.Confirmed or OrderStatus.Cancelled,
+                OrderStatus.Confirmed => next is OrderStatus.Shipped or OrderStatus.Cancelled,
+                OrderStatus.Shipped => next is OrderStatus.Delivered or OrderStatus.Cancelled,
+                OrderStatus.Delivered => false, // Không thể thay đổi sau khi delivered
+                OrderStatus.Cancelled => false, // Không thể thay đổi sau khi cancelled
+                _ => false
+            };
         }
     }
 }

@@ -1,0 +1,76 @@
+### Health check
+GET http://localhost:5141/health
+
+### Create escrow (requires JWT token)
+POST http://localhost:5141/api/escrows
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "listingId": "67890abcdef1234567890abc",
+  "sellerId": "12345abcdef1234567890abc",
+  "amount": 5000000
+}
+
+### Get escrow by ID
+GET http://localhost:5141/api/escrows/67890abcdef1234567890abc
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### Get escrow by order ID
+GET http://localhost:5141/api/escrows/order/67890abcdef1234567890abc
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### Get buyer's escrows
+GET http://localhost:5141/api/escrows/buyer
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### Get seller's escrows
+GET http://localhost:5141/api/escrows/seller
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+
+### Release escrow to seller
+POST http://localhost:5141/api/escrows/67890abcdef1234567890abc/release
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "reason": "Buyer confirmed delivery"
+}
+
+### Refund escrow to buyer
+POST http://localhost:5141/api/escrows/67890abcdef1234567890abc/refund
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "reason": "Product not as described"
+}
+
+### Payment webhook
+POST http://localhost:5141/api/webhooks/payment
+Content-Type: application/json
+
+{
+  "event_id": "evt_test_123",
+  "event_type": "payment.captured",
+  "payment_intent_id": "pi_test_456",
+  "amount": 5000000,
+  "currency": "VND",
+  "status": "succeeded"
+}
+
+### ===============================================
+### Through Gateway
+### ===============================================
+
+### Create escrow through gateway
+POST http://localhost:5000/api/escrows
+Authorization: Bearer YOUR_JWT_TOKEN_HERE
+Content-Type: application/json
+
+{
+  "listingId": "67890abcdef1234567890abc",
+  "sellerId": "12345abcdef1234567890abc",
+  "amount": 5000000
+}
+
