@@ -5,9 +5,9 @@ namespace ProductService.Application.DTOs
         public string? Brand { get; set; }
         public int? Year { get; set; }
         public int? CycleCount { get; set; }
-        public double? SOH { get; set; }
         public string? Capacity { get; set; }
         public string? Condition { get; set; }
+        public string? Voltage { get; set; }
     }
 
     public class PriceSuggestionResponse

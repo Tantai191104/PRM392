@@ -8,7 +8,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Load environment-specific appsettings
+// ===== Load config =====
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
@@ -17,11 +17,34 @@ builder.Configuration
 // ===== MongoDB =====
 var mongoSettings = builder.Configuration.GetSection("MongoSettings");
 var client = new MongoClient(mongoSettings["ConnectionString"]);
-string dbName = mongoSettings["DatabaseName"]!;
+var dbName = mongoSettings["DatabaseName"]!;
 
 // ===== DI =====
 builder.Services.AddSingleton(new ProductRepository(client, dbName));
 builder.Services.AddSingleton<ProductAppService>();
+
+// ✅ GeminiService với API Key
+builder.Services.AddHttpClient("gemini");
+builder.Services.AddSingleton<GeminiService>(sp =>
+{
+    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+    var httpClient = httpClientFactory.CreateClient("gemini");
+    var config = sp.GetRequiredService<IConfiguration>();
+    var logger = sp.GetRequiredService<ILogger<GeminiService>>();
+
+    // Endpoint chuẩn dùng API Key
+    var endpoint = config["Gemini:Endpoint"] ??
+                   throw new Exception("Missing Gemini:Endpoint");
+    var apiKey = config["Gemini:ApiKey"] ??
+                 throw new Exception("Missing Gemini:ApiKey");
+
+    // Thêm API Key vào query string
+    httpClient.BaseAddress = new Uri($"{endpoint}?key={apiKey}");
+
+    return new GeminiService(httpClient, config["Gemini:Endpoint"] ?? throw new Exception("Missing Gemini:Endpoint"), config["Gemini:ApiKey"] ?? throw new Exception("Missing Gemini:ApiKey"), logger);
+});
+
+// Price Suggestion Service
 builder.Services.AddSingleton<IPriceSuggestionService, PriceSuggestionService>();
 
 // ===== Controllers + Swagger =====
@@ -35,7 +58,7 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1",
         Description = "API for managing products"
     });
-    // Add JWT Bearer support in Swagger UI so we can use the Authorize button
+
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -43,8 +66,9 @@ builder.Services.AddSwaggerGen(c =>
         Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Enter 'Bearer {token}' - you can copy the token from AuthService login response."
+        Description = "Enter 'Bearer {token}'"
     });
+
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -57,13 +81,9 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// ===== JWT Authentication (validate tokens issued by AuthService) =====
+// ===== JWT Auth =====
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -77,69 +97,45 @@ builder.Services.AddAuthentication(options =>
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!))
         };
 
-        // Add event handlers to help debug token validation issues at runtime
         options.Events = new JwtBearerEvents
         {
             OnTokenValidated = ctx =>
             {
-                try
-                {
-                    var claims = ctx.Principal?.Claims.Select(c => new KeyValuePair<string, string>(c.Type, c.Value)).ToList()
-                                 ?? new List<KeyValuePair<string, string>>();
-                    Console.WriteLine("ProductService: Token validated. Claims:");
-                    foreach (var c in claims)
-                    {
-                        Console.WriteLine($"  {c.Key} => {c.Value}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"ProductService: OnTokenValidated error: {ex.Message}");
-                }
+                Console.WriteLine("✅ Token validated for ProductService");
                 return Task.CompletedTask;
             },
             OnAuthenticationFailed = ctx =>
             {
-                Console.WriteLine($"ProductService: Token validation failed: {ctx.Exception?.Message}");
+                Console.WriteLine($"❌ Token validation failed: {ctx.Exception?.Message}");
                 return Task.CompletedTask;
             }
         };
     });
 
-// Authorization
 builder.Services.AddAuthorization();
 
-// Register an HttpClient to call AuthService for user info
-builder.Services.AddHttpClient("auth", client =>
+// ===== Downstream services =====
+builder.Services.AddHttpClient("auth", c =>
 {
-    client.BaseAddress = new Uri(builder.Configuration.GetValue<string>("Downstream:AuthBaseUrl") ?? "http://authservice:5133");
+    c.BaseAddress = new Uri(builder.Configuration["Downstream:AuthBaseUrl"] ?? "http://authservice:5133");
 });
 
-// Register an HttpClient to call AiService for battery prediction/price suggestion
-builder.Services.AddHttpClient("ai", client =>
-{
-    // Call through API Gateway without /ai prefix in BaseAddress
-    // Full URL will be: http://apigateway:5016 + /ai/api/BatteryPrediction/predict
-    client.BaseAddress = new Uri(builder.Configuration.GetValue<string>("Downstream:AiBaseUrl") ?? "http://apigateway:5016");
-});
-
-// ✅ ===== CORS phải đăng ký trước khi Build =====
+// ===== CORS =====
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5000", "http://127.0.0.1:5000") // Gateway
+        policy.WithOrigins("http://localhost:5000", "http://127.0.0.1:5000")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
     });
 });
 
-// ✅ Bây giờ mới Build
 var app = builder.Build();
 
 // ===== Middleware =====
-app.UseCors(); // Cho phép CORS
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseSwagger();
@@ -149,8 +145,8 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = string.Empty;
 });
 
-// app.UseHttpsRedirection(); // ❌ Bỏ khi chạy Docker
+// app.UseHttpsRedirection();
 app.MapControllers();
-// Health endpoint for orchestration / load balancers
 app.MapGet("/health", () => Results.Json(new { status = "ok", service = "ProductService" }));
+
 app.Run();

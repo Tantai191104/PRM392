@@ -159,57 +159,40 @@ namespace ProductService.Web.Controllers
                 OwnerId = ownerId
             };
 
-            // Call AI service to evaluate and store embedded data
+            // Đơn giản hóa: chỉ gọi API AI prompt lấy đánh giá và giá gợi ý
             PriceSuggestionResult? aiSuggestion = null;
             try
             {
                 var aiClient = _httpFactory.CreateClient("ai");
-                var aiInput = MapToAiFeatures(dto, product.Id);
-                // BaseAddress is http://apigateway:5016, so full path is /ai/api/BatteryPrediction/predict
-                using var resp = await aiClient.PostAsJsonAsync("/ai/api/BatteryPrediction/predict", aiInput);
+                // Gửi prompt đơn giản, chỉ truyền các trường cơ bản
+                var promptRequest = new
+                {
+                    name = dto.Name,
+                    type = dto.Type,
+                    brand = dto.Brand,
+                    year = dto.Year,
+                    condition = dto.Condition,
+                    price = dto.Price
+                };
+                using var resp = await aiClient.PostAsJsonAsync("/ai/api/BatteryPrediction/prompt", promptRequest);
                 if (resp.IsSuccessStatusCode)
                 {
                     aiSuggestion = await resp.Content.ReadFromJsonAsync<PriceSuggestionResult>();
+                    // Nếu có đánh giá, lưu vào product
                     if (aiSuggestion != null)
                     {
-                        // Only store SOH (State of Health) in product
                         product.SOH = aiSuggestion.EstimatedRemainingPercent;
-                        // Keep user's input price, don't override with AI suggestion
-                        // AI suggested price is returned separately for user reference
-                    }
-
-                    // Add training data with user's actual price (fire and forget)
-                    if (product.Price > 0 && !string.IsNullOrWhiteSpace(product.Brand))
-                    {
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                var trainingRequest = new
-                                {
-                                    batteryFeatures = aiInput,
-                                    actualStatus = aiSuggestion?.Status ?? "Good",
-                                    actualPrice = (float)product.Price
-                                };
-                                await aiClient.PostAsJsonAsync("/ai/api/BatteryPrediction/add-training", trainingRequest);
-                                Console.WriteLine($"[ProductService] Added training data for product {product.Id} with price ${product.Price}");
-                            }
-                            catch (Exception trainingEx)
-                            {
-                                Console.WriteLine($"[ProductService] Failed to add training data: {trainingEx.Message}");
-                            }
-                        });
                     }
                 }
                 else
                 {
                     var err = await resp.Content.ReadAsStringAsync();
-                    Console.WriteLine($"[AI Predict] Status: {resp.StatusCode}, Body: {err}");
+                    Console.WriteLine($"[AI Prompt] Status: {resp.StatusCode}, Body: {err}");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[AI Predict] Exception: {ex.Message}");
+                Console.WriteLine($"[AI Prompt] Exception: {ex.Message}");
             }
 
             await _service.Create(product);
@@ -462,23 +445,6 @@ namespace ProductService.Web.Controllers
 
             await _service.Update(product);
             return Ok(new { success = true, message = "Product submitted for review", product });
-        }
-
-        // 🔹 Get price suggestion (AI mock - rule-based)
-        [HttpPost("price-suggestion")]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetPriceSuggestion([FromBody] PriceSuggestionRequest request,
-            [FromServices] IPriceSuggestionService priceService)
-        {
-            try
-            {
-                var suggestion = await priceService.GetPriceSuggestionAsync(request);
-                return Ok(new { success = true, data = suggestion });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { success = false, message = "Error calculating price suggestion", error = ex.Message });
-            }
         }
 
         // 🔹 Helper: lấy thông tin chủ sở hữu sản phẩm từ dịch vụ xác thực
