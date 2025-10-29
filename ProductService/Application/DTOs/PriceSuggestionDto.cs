@@ -12,12 +12,13 @@ namespace ProductService.Application.DTOs
 
     public class PriceSuggestionResponse
     {
-        public decimal SuggestedPrice { get; set; }
-        public decimal MinPrice { get; set; }
-        public decimal MaxPrice { get; set; }
-        public string PriceRange { get; set; } = string.Empty;
-        public List<string> Factors { get; set; } = new();
-        public string Explanation { get; set; } = string.Empty;
+    public decimal SuggestedPrice { get; set; }
+    public decimal MinPrice { get; set; }
+    public decimal MaxPrice { get; set; }
+    public string PriceRange { get; set; } = string.Empty;
+    public List<string> Factors { get; set; } = new();
+    public string Explanation { get; set; } = string.Empty;
+    public double SOH { get; set; }
     }
 
     public class UpdateStatusDto

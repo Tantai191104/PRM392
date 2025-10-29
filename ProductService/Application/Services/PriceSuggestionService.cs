@@ -103,10 +103,16 @@ namespace ProductService.Application.Services
             var factors = new List<string>();
 
             decimal aiPrice = 0;
+            double soh = 100;
             try
             {
-                // Chỉ gọi AI để lấy giá, không lấy SOH
-                aiPrice = await GetAiSuggestedPriceAsync(request);
+                // Gọi song song Gemini cho SOH và giá gợi ý
+                var sohTask = _geminiService.EvaluateSOHAsync(request);
+                var priceTask = GetAiSuggestedPriceAsync(request);
+                await Task.WhenAll(sohTask, priceTask);
+                soh = sohTask.Result;
+                aiPrice = priceTask.Result;
+                factors.Add($"SOH từ Gemini: {soh:F1}%");
                 if (aiPrice > 0)
                     factors.Add($"Giá gợi ý từ Gemini: {aiPrice:N0} VND");
                 else
@@ -114,7 +120,7 @@ namespace ProductService.Application.Services
             }
             catch (Exception ex)
             {
-                factors.Add($"Không lấy được giá từ Gemini, dùng mặc định. Lỗi: {ex.Message}");
+                factors.Add($"Không lấy được SOH hoặc giá từ Gemini, dùng mặc định. Lỗi: {ex.Message}");
             }
 
             // Nếu AI trả về giá hợp lệ thì dùng, nếu không thì fallback về logic cũ
@@ -131,11 +137,12 @@ namespace ProductService.Application.Services
                 Factors = factors,
                 Explanation = $"Giá đề xuất dựa trên AI Gemini. " +
                               $"Giá trung bình thị trường cho sản phẩm tương tự là {suggestedPrice:N0} VND. " +
-                              $"Bạn có thể điều chỉnh trong khoảng {minPrice:N0} - {maxPrice:N0} VND tùy thuộc vào nhu cầu bán nhanh hay tối đa hóa lợi nhuận."
+                              $"Bạn có thể điều chỉnh trong khoảng {minPrice:N0} - {maxPrice:N0} VND tùy thuộc vào nhu cầu bán nhanh hay tối đa hóa lợi nhuận.",
+                SOH = soh
             };
 
-            _logger.LogInformation("Price suggestion calculated: {Price} VND for {Brand} {Year}",
-                suggestedPrice, request.Brand, request.Year);
+            _logger.LogInformation("Price suggestion calculated: {Price} VND for {Brand} {Year} SOH: {SOH}",
+                suggestedPrice, request.Brand, request.Year, soh);
 
             return response;
         }
