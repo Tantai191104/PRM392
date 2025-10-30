@@ -20,5 +20,9 @@
     <ProjectReference Include="..\SharedKernel\SharedKernel.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\WalletService\WalletService.csproj" />
+  </ItemGroup>
+
 </Project>
 

@@ -198,7 +198,21 @@ namespace OrderService.Web.Controllers
                 return StatusCode(500, new { success = false, message = ex.Message });
             }
         }
+        [HttpGet("status/{orderId}")]
+        [Authorize]
+        public async Task<IActionResult> GetOrderStatus(string orderId)
+        {
+            var order = await _orderAppService.GetOrderByIdAsync(orderId);
+            if (order == null)
+                return NotFound(new { success = false, message = $"Order with ID {orderId} not found" });
 
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var isAdmin = User.IsInRole("Admin");
+            if (!isAdmin && userId != order.Buyer.Id && userId != order.Seller.Id)
+                return Forbid();
+
+            return Ok(new { orderId = order.Id, status = order.Status });
+        }
         private bool IsValidStatusTransition(OrderStatus current, OrderStatus next)
         {
             return current switch

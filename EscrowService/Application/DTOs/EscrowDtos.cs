@@ -4,16 +4,17 @@ namespace EscrowService.Application.DTOs
 {
     public class CreateEscrowDto
     {
-        public required string ListingId { get; set; }
-        public required string SellerId { get; set; }
-        public decimal Amount { get; set; }
+    public string? OrderId { get; set; }
+    public required string ProductId { get; set; }
+    public required string SellerId { get; set; }
+    public decimal Amount { get; set; }
     }
 
     public class EscrowResponseDto
     {
         public string Id { get; set; } = string.Empty;
         public string? OrderId { get; set; }
-        public string ListingId { get; set; } = string.Empty;
+        public string ProductId { get; set; } = string.Empty;
         public string BuyerId { get; set; } = string.Empty;
         public string SellerId { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;

@@ -1,19 +1,33 @@
+# =========================
+# Stage 1: Build & Publish
+# =========================
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# copy entire repo (build context set to repo root in docker-compose)
+# Copy các file cần thiết
+COPY APIGateway/APIGateway.csproj APIGateway/
+COPY SharedKernel/SharedKernel.csproj SharedKernel/
+
+# Restore dependencies chỉ cho APIGateway
+RUN dotnet restore APIGateway/APIGateway.csproj
+
+# Copy toàn bộ source code sau khi restore xong
 COPY . .
 
-# Restore solution to ensure all packages are available
-RUN dotnet restore "PRM392.sln"
+# Set working directory tới project chính
+WORKDIR /src/APIGateway
 
-# publish the gateway project
-RUN dotnet publish "APIGateway/APIGateway.csproj" -c Release -o /app/publish --no-restore
+# Build & publish app ra thư mục /app/publish
+RUN dotnet publish -c Release -o /app/publish --no-restore
 
+# =========================
+# Stage 2: Runtime
+# =========================
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 
 ENV ASPNETCORE_URLS=http://+:5016
 EXPOSE 5016
+
 ENTRYPOINT ["dotnet", "APIGateway.dll"]

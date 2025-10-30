@@ -8,11 +8,18 @@ using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using System.Text;
 
-// ==============================
-// 🔧 Add services to the container
-// ==============================
 var builder = WebApplication.CreateBuilder(args);
+// Đăng ký WalletServiceClient với HttpClient và cấu hình BaseAddress
+var walletServiceBaseUrl = builder.Configuration["ExternalServices:WalletService:BaseUrl"] ?? "http://walletservice:5150";
+builder.Services.AddHttpClient<WalletServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(walletServiceBaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 
+// ==============================
+// 📘 Add core services
+// ==============================
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -24,7 +31,7 @@ builder.Services.AddSwaggerGen(c =>
         Description = "API for managing orders"
     });
 
-    // Add JWT Bearer support in Swagger UI
+    // ✅ JWT Bearer setup for Swagger UI
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -51,16 +58,17 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Configuration
-builder.Services.Configure<MongoSettings>(
-    builder.Configuration.GetSection("MongoSettings"));
-builder.Services.Configure<JwtSettings>(
-    builder.Configuration.GetSection("JwtSettings"));
+// ==============================
+// ⚙️ Configuration Bindings
+// ==============================
+builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("MongoSettings"));
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
 // ==============================
 // 🔐 JWT Authentication
 // ==============================
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -78,7 +86,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 // ==============================
-// 🛡 Authorization Policy
+// 🛡 Authorization
 // ==============================
 builder.Services.AddAuthorization(options =>
 {
@@ -102,8 +110,10 @@ builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderAppService, OrderAppService>();
 
 // ==============================
-// 🌐 HTTP Clients
+// 🌐 External HTTP Clients
 // ==============================
+
+// Auth Service
 builder.Services.AddHttpClient<IAuthService, AuthService>(client =>
 {
     var baseUrl = builder.Configuration["ExternalServices:AuthService:BaseUrl"] ?? "http://authservice:5133";
@@ -111,10 +121,19 @@ builder.Services.AddHttpClient<IAuthService, AuthService>(client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
+// Product Service
 builder.Services.AddHttpClient<IProductService, ProductService>(client =>
 {
     var baseUrl = builder.Configuration["ExternalServices:ProductService:BaseUrl"] ?? "http://productservice:5137";
     client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+// Wallet Service Client
+builder.Services.AddHttpClient<WalletServiceClient>(client =>
+{
+    var walletServiceBaseUrl = builder.Configuration["ExternalServices:WalletService:BaseUrl"] ?? "http://walletservice:5150";
+    client.BaseAddress = new Uri(walletServiceBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
@@ -142,18 +161,20 @@ builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 // ==============================
-//  Middleware pipeline
+// 🚀 Middleware Pipeline
 // ==============================
 app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseRouting();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.MapHealthChecks("/health");
+
 app.MapGet("/health/simple", () =>
     Results.Json(new
     {

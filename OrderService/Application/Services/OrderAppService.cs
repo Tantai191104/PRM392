@@ -28,13 +28,15 @@ namespace OrderService.Application.Services
         private readonly IAuthService _authService;
         private readonly IProductService _productService;
         private readonly string _productServiceBaseUrl;
+        private readonly WalletServiceClient _walletClient;
 
         public OrderAppService(
             IMongoDatabase database,
             IHttpClientFactory httpClientFactory,
             IAuthService authService,
             IProductService productService,
-            IConfiguration config)
+            IConfiguration config,
+            WalletServiceClient walletClient)
         {
             _orders = database.GetCollection<Order>("Orders");
             _httpClientFactory = httpClientFactory;
@@ -42,6 +44,7 @@ namespace OrderService.Application.Services
             _productService = productService;
             _productServiceBaseUrl = config["ExternalServices:ProductService:BaseUrl"]
                 ?? "http://productservice:5137";
+            _walletClient = walletClient;
         }
 
         public async Task<Product?> GetProductForOrderAsync(string productId)
@@ -132,8 +135,6 @@ namespace OrderService.Application.Services
             if (userDto == null)
                 return null;
 
-            // Convert UserDto to User entity
-            // Ưu tiên DisplayName, sau đó FullName, cuối cùng mới là Name
             var userName = !string.IsNullOrWhiteSpace(userDto.DisplayName)
                 ? userDto.DisplayName
                 : (!string.IsNullOrWhiteSpace(userDto.FullName)
@@ -153,18 +154,27 @@ namespace OrderService.Application.Services
         {
             var product = await GetProductAsync(dto.ProductId);
 
-            // Lấy thông tin người mua từ AuthService
             var buyer = await GetUserAsync(buyerId);
             if (buyer == null)
                 throw new InvalidOperationException("Buyer information not found");
 
-            // Lấy thông tin người bán từ AuthService
             var seller = await GetUserAsync(product.OwnerId);
             if (seller == null)
                 throw new InvalidOperationException("Seller information not found");
 
-            // Tính tổng tiền = giá sản phẩm + phí ship
+            if (buyer.Id == seller.Id)
+                throw new InvalidOperationException("Bạn không thể mua sản phẩm của chính mình.");
+
             var totalAmount = product.Price + dto.ShippingFee;
+
+            // Tích hợp kiểm tra ví và giữ tiền
+            var balance = await _walletClient.GetBalanceAsync(buyerId);
+            if (balance == null || balance < totalAmount)
+                throw new InvalidOperationException("Số dư ví không đủ để thanh toán đơn hàng.");
+
+            var holdResult = await _walletClient.HoldMoneyAsync(buyerId, totalAmount);
+            if (!holdResult)
+                throw new InvalidOperationException("Không thể giữ tiền trong ví. Vui lòng thử lại.");
 
             var order = new Order
             {
@@ -192,6 +202,30 @@ namespace OrderService.Application.Services
 
             await _orders.InsertOneAsync(order);
             await UpdateProductStatusInternalAsync(dto.ProductId, "InTransaction");
+
+            // Tích hợp gọi EscrowService, truyền đúng OrderId và ProductId
+            try
+            {
+                var escrowClient = _httpClientFactory.CreateClient();
+                var escrowServiceUrl = "http://escrowservice:5141/api/escrows";
+                var escrowDto = new
+                {
+                    OrderId = order.Id,
+                    ProductId = product.Id,
+                    SellerId = seller.Id,
+                    Amount = totalAmount
+                };
+                var escrowResp = await escrowClient.PostAsJsonAsync(escrowServiceUrl, escrowDto);
+                if (!escrowResp.IsSuccessStatusCode)
+                {
+                    var err = await escrowResp.Content.ReadAsStringAsync();
+                    Console.WriteLine($"[Escrow] Failed to create escrow: {err}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Escrow] Exception: {ex.Message}");
+            }
 
             return ToResponseDto(order);
         }

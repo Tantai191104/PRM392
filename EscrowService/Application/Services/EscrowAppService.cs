@@ -3,6 +3,8 @@ using EscrowService.Application.Saga;
 using EscrowService.Domain.Entities;
 using EscrowService.Infrastructure.Providers;
 using EscrowService.Infrastructure.Repositories;
+using EscrowService.Infrastructure.ExternalServices;
+using Microsoft.Extensions.Logging;
 
 namespace EscrowService.Application.Services
 {
@@ -23,46 +25,50 @@ namespace EscrowService.Application.Services
         private readonly IPaymentRepository _paymentRepo;
         private readonly IPaymentProvider _paymentProvider;
         private readonly EscrowSagaOrchestrator _sagaOrchestrator;
+        private readonly IOrderServiceClient _orderServiceClient;
         private readonly ILogger<EscrowAppService> _logger;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ILoggerFactory _loggerFactory;
 
         public EscrowAppService(
             IEscrowRepository escrowRepo,
             IPaymentRepository paymentRepo,
             IPaymentProvider paymentProvider,
             EscrowSagaOrchestrator sagaOrchestrator,
-            ILogger<EscrowAppService> logger)
+            IOrderServiceClient orderServiceClient,
+            ILogger<EscrowAppService> logger,
+            IHttpClientFactory httpClientFactory,
+            ILoggerFactory loggerFactory)
         {
             _escrowRepo = escrowRepo;
             _paymentRepo = paymentRepo;
             _paymentProvider = paymentProvider;
             _sagaOrchestrator = sagaOrchestrator;
+            _orderServiceClient = orderServiceClient;
             _logger = logger;
+            _httpClientFactory = httpClientFactory;
+            _loggerFactory = loggerFactory;
         }
 
         public async Task<EscrowResponseDto> CreateEscrowAsync(CreateEscrowDto dto, string buyerId)
         {
-            // Create saga context
             var context = new SagaContext
             {
                 BuyerId = buyerId,
                 SellerId = dto.SellerId,
-                ListingId = dto.ListingId,
-                Amount = dto.Amount
+                ProductId = dto.ProductId,
+                Amount = dto.Amount,
+                OrderId = dto.OrderId
             };
 
-            // Execute saga
             var result = await _sagaOrchestrator.ExecuteCreateEscrowSagaAsync(context);
 
             if (!result.Success)
-            {
                 throw new InvalidOperationException($"Failed to create escrow: {result.ErrorMessage}");
-            }
 
             var escrow = await _escrowRepo.GetByIdAsync(result.EscrowId!);
             if (escrow == null)
-            {
                 throw new InvalidOperationException("Escrow was created but not found");
-            }
 
             return MapToDto(escrow);
         }
@@ -97,15 +103,29 @@ namespace EscrowService.Application.Services
             if (escrow == null)
                 throw new ArgumentException("Escrow not found");
 
-            // Only seller or admin can release
             if (escrow.SellerId != userId)
                 throw new UnauthorizedAccessException("Only seller can release escrow");
 
             if (escrow.Status != EscrowStatus.HOLDING)
                 throw new InvalidOperationException($"Cannot release escrow with status {escrow.Status}");
 
-            // In real implementation, transfer funds to seller
-            // For MVP, just mark as released
+            // Check order status
+            if (!string.IsNullOrEmpty(escrow.OrderId))
+            {
+                var orderStatus = await GetOrderStatusFromOrderServiceAsync(escrow.OrderId);
+                if (orderStatus != "Delivered")
+                    throw new InvalidOperationException($"Cannot release escrow: order {escrow.OrderId} status is {orderStatus}, must be Delivered.");
+            }
+
+            // Transfer money via WalletService
+            var httpClient = _httpClientFactory.CreateClient();
+            var walletLogger = _loggerFactory.CreateLogger<WalletServiceClient>();
+            var walletClient = new WalletServiceClient(httpClient, walletLogger);
+
+            var transferResult = await walletClient.TransferAsync(escrow.BuyerId, escrow.SellerId, escrow.AmountTotal);
+            if (!transferResult)
+                throw new InvalidOperationException("Không thể chuyển tiền cho người bán. Vui lòng thử lại.");
+
             escrow.Status = EscrowStatus.RELEASED;
             escrow.Payout = new PayoutInfo
             {
@@ -116,10 +136,17 @@ namespace EscrowService.Application.Services
             escrow.AddEvent(EscrowEventType.RELEASED, dto.Reason ?? "Buyer confirmed delivery", userId);
 
             await _escrowRepo.UpdateAsync(escrow);
-
             _logger.LogInformation("Released escrow {EscrowId} to seller {SellerId}", id, escrow.SellerId);
 
             return MapToDto(escrow);
+        }
+
+        private async Task<string> GetOrderStatusFromOrderServiceAsync(string orderId)
+        {
+            var status = await _orderServiceClient.GetOrderStatusAsync(orderId);
+            if (string.IsNullOrEmpty(status))
+                throw new InvalidOperationException($"Cannot get order status from OrderService for order {orderId}");
+            return status;
         }
 
         public async Task<EscrowResponseDto> RefundEscrowAsync(string id, string userId, RefundEscrowDto dto)
@@ -128,14 +155,20 @@ namespace EscrowService.Application.Services
             if (escrow == null)
                 throw new ArgumentException("Escrow not found");
 
-            // Only buyer or admin can request refund
+            if (!string.IsNullOrEmpty(escrow.OrderId))
+            {
+                var orderStatus = await GetOrderStatusFromOrderServiceAsync(escrow.OrderId);
+                if (orderStatus != "Returned")
+                    throw new InvalidOperationException($"Cannot refund escrow: order {escrow.OrderId} status is {orderStatus}, must be Returned.");
+            }
+
             if (escrow.BuyerId != userId)
                 throw new UnauthorizedAccessException("Only buyer can request refund");
 
             if (escrow.Status != EscrowStatus.HOLDING)
                 throw new InvalidOperationException($"Cannot refund escrow with status {escrow.Status}");
 
-            // Refund payment
+            // Refund via payment provider
             if (escrow.Payment?.PaymentIntentId != null)
             {
                 await _paymentProvider.RefundAsync(escrow.Payment.PaymentIntentId, escrow.AmountTotal);
@@ -151,15 +184,22 @@ namespace EscrowService.Application.Services
                     Status = PaymentStatus.SUCCEEDED
                 };
                 await _paymentRepo.CreateAsync(payment);
-
                 escrow.Payment.RefundedAt = DateTime.UtcNow;
             }
+
+            // Refund to buyer wallet
+            var httpClient = _httpClientFactory.CreateClient();
+            var walletLogger = _loggerFactory.CreateLogger<WalletServiceClient>();
+            var walletClient = new WalletServiceClient(httpClient, walletLogger);
+
+            var refundResult = await walletClient.ReleaseMoneyAsync(escrow.BuyerId, escrow.AmountTotal);
+            if (!refundResult)
+                throw new InvalidOperationException("Không thể hoàn tiền vào ví người mua. Vui lòng thử lại.");
 
             escrow.Status = EscrowStatus.REFUNDED;
             escrow.AddEvent(EscrowEventType.REFUNDED, dto.Reason, userId);
 
             await _escrowRepo.UpdateAsync(escrow);
-
             _logger.LogInformation("Refunded escrow {EscrowId} to buyer {BuyerId}", id, escrow.BuyerId);
 
             return MapToDto(escrow);
@@ -171,7 +211,7 @@ namespace EscrowService.Application.Services
             {
                 Id = escrow.Id,
                 OrderId = escrow.OrderId,
-                ListingId = escrow.ListingId,
+                ProductId = escrow.ProductId,
                 BuyerId = escrow.BuyerId,
                 SellerId = escrow.SellerId,
                 Status = escrow.Status.ToString(),
@@ -186,4 +226,3 @@ namespace EscrowService.Application.Services
         }
     }
 }
-

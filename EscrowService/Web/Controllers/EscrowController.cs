@@ -28,12 +28,17 @@ namespace EscrowService.Web.Controllers
         {
             try
             {
-                var buyerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                var buyerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                               ?? User.FindFirst("sub")?.Value
                               ?? Request.Headers["X-User-Id"].FirstOrDefault();
 
                 if (string.IsNullOrEmpty(buyerId))
                     return Unauthorized(new { success = false, message = "User not authenticated" });
+
+                // Truyền OrderId từ query nếu có
+                var orderId = Request.Query["orderId"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(orderId))
+                    dto.OrderId = orderId;
 
                 var escrow = await _escrowService.CreateEscrowAsync(dto, buyerId);
                 return Ok(new { success = true, data = escrow });

@@ -22,7 +22,7 @@ namespace EscrowService.Application.Saga.Steps
             {
                 var escrow = new Escrow
                 {
-                    ListingId = context.ListingId,
+                    ProductId = context.ProductId,
                     BuyerId = context.BuyerId,
                     SellerId = context.SellerId,
                     AmountTotal = context.Amount,
@@ -40,7 +40,7 @@ namespace EscrowService.Application.Saga.Steps
                 await _escrowRepo.CreateAsync(escrow);
 
                 context.EscrowId = escrow.Id;
-                _logger.LogInformation("Created escrow {EscrowId} for listing {ListingId}", escrow.Id, context.ListingId);
+                _logger.LogInformation("Created escrow {EscrowId} for product {ProductId}", escrow.Id, context.ProductId);
 
                 return SagaStepResult.Successful(new Dictionary<string, object>
                 {

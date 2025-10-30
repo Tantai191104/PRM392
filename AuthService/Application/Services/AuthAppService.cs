@@ -7,13 +7,15 @@ namespace AuthService.Application.Services
 {
     public class AuthAppService
     {
-        private readonly UserRepository _userRepo;
-        private readonly JwtService _jwtService;
+    private readonly UserRepository _userRepo;
+    private readonly JwtService _jwtService;
+    private readonly WalletClientService? _walletClientService;
 
-        public AuthAppService(UserRepository userRepo, JwtService jwtService)
+        public AuthAppService(UserRepository userRepo, JwtService jwtService, WalletClientService? walletClientService = null)
         {
             _userRepo = userRepo;
             _jwtService = jwtService;
+            _walletClientService = walletClientService;
         }
 
         public async Task<RegisterResultDto> Register(RegisterDto dto)
@@ -50,7 +52,14 @@ namespace AuthService.Application.Services
                 AvatarUrl = "https://ui-avatars.com/api/?name=User"
             };
 
+
             await _userRepo.CreateAsync(user);
+
+            // Gọi tạo ví cho user mới
+            if (_walletClientService != null && !string.IsNullOrEmpty(user.Id))
+            {
+                await _walletClientService.CreateWalletAsync(user.Id);
+            }
 
             var userDto = new UserResponseDto
             {

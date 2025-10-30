@@ -14,9 +14,9 @@ namespace EscrowService.Domain.Entities
         [BsonRepresentation(BsonType.ObjectId)]
         public string? OrderId { get; set; }
 
-        [BsonElement("listing_id")]
+        [BsonElement("product_id")]
         [BsonRepresentation(BsonType.ObjectId)]
-        public required string ListingId { get; set; }
+        public required string ProductId { get; set; }
 
         [BsonElement("buyer_id")]
         [BsonRepresentation(BsonType.ObjectId)]

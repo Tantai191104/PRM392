@@ -19,15 +19,15 @@ namespace EscrowService.Application.Saga.Steps
         {
             try
             {
-                // Call ProductService to set listing status to InTransaction
-                var success = await _productClient.UpdateListingStatusAsync(context.ListingId, "InTransaction");
+                // Call ProductService to set product status to InTransaction
+                var success = await _productClient.UpdateListingStatusAsync(context.ProductId, "InTransaction");
 
                 if (!success)
                 {
-                    return SagaStepResult.Failed("Failed to reserve listing");
+                    return SagaStepResult.Failed("Failed to reserve product");
                 }
 
-                _logger.LogInformation("Reserved listing {ListingId}", context.ListingId);
+                _logger.LogInformation("Reserved product {ProductId}", context.ProductId);
 
                 return SagaStepResult.Successful();
             }
@@ -42,9 +42,9 @@ namespace EscrowService.Application.Saga.Steps
         {
             try
             {
-                // Unreserve listing - set back to Published
-                await _productClient.UpdateListingStatusAsync(context.ListingId, "Published");
-                _logger.LogInformation("Compensated: Unreserved listing {ListingId}", context.ListingId);
+                // Unreserve product - set back to Published
+                await _productClient.UpdateListingStatusAsync(context.ProductId, "Published");
+                _logger.LogInformation("Compensated: Unreserved product {ProductId}", context.ProductId);
                 return true;
             }
             catch (Exception ex)
