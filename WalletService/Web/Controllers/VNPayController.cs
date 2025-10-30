@@ -8,6 +8,7 @@ using WalletService.Application.DTOs;
 using WalletService.Application.Services;
 using WalletService.Domain.Entities;
 using WalletService.Infrastructure.VNPay;
+using Microsoft.Extensions.Logging;
 
 namespace WalletService.Web.Controllers
 {
@@ -18,15 +19,18 @@ namespace WalletService.Web.Controllers
         private readonly VNPayService _vnpayService;
         private readonly WalletAppService _walletService;
         private readonly TransactionService _transactionService;
+    private readonly ILogger<VNPayController> _logger;
 
         public VNPayController(
             VNPayService vnpayService, 
             WalletAppService walletService,
-            TransactionService transactionService)
+            TransactionService transactionService,
+            ILogger<VNPayController> logger)
         {
             _vnpayService = vnpayService;
             _walletService = walletService;
             _transactionService = transactionService;
+            _logger = logger;
         }
 
         /// <summary>
@@ -54,7 +58,48 @@ namespace WalletService.Web.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> VNPayCallback()
         {
+            // Read query parameters first
             var callbackData = Request.Query.ToDictionary(x => x.Key, x => x.Value.ToString());
+
+            // Log low-level request info to help diagnose empty query issues
+            _logger?.LogInformation("VNPay callback HTTP {method} received. QueryString: {qs}. Content-Type: {ct}",
+                Request.Method,
+                Request.QueryString.HasValue ? Request.QueryString.Value : string.Empty,
+                Request.ContentType ?? string.Empty);
+
+            // If query is empty, VNPay may have sent parameters as form-data (POST) or in the body. Try to read form data.
+            if (!callbackData.Any())
+            {
+                if (Request.HasFormContentType)
+                {
+                    var form = await Request.ReadFormAsync();
+                    callbackData = form.ToDictionary(x => x.Key, x => x.Value.ToString());
+                    _logger?.LogInformation("VNPay callback parameters found in form body. Keys: {keys}", string.Join(',', callbackData.Keys));
+                }
+                else
+                {
+                    // Try to read raw body as fallback
+                    Request.EnableBuffering();
+                    using var reader = new System.IO.StreamReader(Request.Body, System.Text.Encoding.UTF8, leaveOpen: true);
+                    var body = await reader.ReadToEndAsync();
+                    Request.Body.Position = 0;
+                    if (!string.IsNullOrEmpty(body))
+                    {
+                        _logger?.LogInformation("VNPay callback raw body: {body}", body);
+                        // Try to parse body as query string
+                        var pairs = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(body);
+                        callbackData = pairs.ToDictionary(kv => kv.Key, kv => kv.Value.ToString());
+                    }
+                }
+            }
+
+            // Log incoming callback (sanitized) for debugging signature issues
+            var incomingHash = callbackData.GetValueOrDefault("vnp_SecureHash", string.Empty);
+            var txnRefLog = callbackData.GetValueOrDefault("vnp_TxnRef", string.Empty);
+            _logger?.LogInformation("VNPay callback received. TxnRef: {txnRef}, vnp_SecureHash: {hash}, RawKeys: {keys}",
+                txnRefLog,
+                incomingHash,
+                string.Join("&", callbackData.Select(kv => kv.Key + "=" + kv.Value)));
 
             // Validate signature
             if (!_vnpayService.ValidateCallback(callbackData))

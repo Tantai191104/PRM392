@@ -33,7 +33,8 @@ builder.Services.AddSwaggerGen(c =>
 // ⚙️ Configuration binding
 // ==============================
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
-builder.Services.Configure<VNPaySettings>(builder.Configuration.GetSection("VNPaySettings"));
+// Note: appsettings.json uses the "VNPay" section. Bind VNPaySettings from that section.
+builder.Services.Configure<VNPaySettings>(builder.Configuration.GetSection("VNPay"));
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
 // ==============================

@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Web;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using WalletService.Application.DTOs;
 
 namespace WalletService.Infrastructure.VNPay
@@ -12,9 +13,12 @@ namespace WalletService.Infrastructure.VNPay
     public class VNPayService
     {
         private readonly IConfiguration _config;
-        public VNPayService(IConfiguration config)
+        private readonly ILogger<VNPayService> _logger;
+
+        public VNPayService(IConfiguration config, ILogger<VNPayService> logger)
         {
             _config = config;
+            _logger = logger;
         }
 
         public VNPayResponseDTO CreatePaymentUrl(VNPayRequestDTO request)
@@ -24,14 +28,16 @@ namespace WalletService.Infrastructure.VNPay
             var vnp_HashSecret = _config["VNPay:HashSecret"];
             var vnp_ReturnUrl = request.ReturnUrl ?? _config["VNPay:ReturnUrl"];
 
-            var vnp_Amount = ((int)request.Amount * 100).ToString();
+            // VNPay expects amount in VND multiplied by 100 (no decimals). Use rounding then convert to long.
+            var vnp_Amount = Convert.ToInt64(Math.Round(request.Amount * 100)).ToString();
             var vnp_TxnRef = DateTime.Now.Ticks.ToString();
 
             var vnp_OrderInfo = string.IsNullOrEmpty(request.OrderInfo)
                 ? $"UserId:{request.UserId}"
                 : $"UserId:{request.UserId}|{request.OrderInfo}";
 
-            var inputData = new SortedDictionary<string, string>
+            // Use ordinal comparer to ensure deterministic ordering matching callback validation
+            var inputData = new SortedDictionary<string, string>(StringComparer.Ordinal)
             {
                 {"vnp_Version", "2.1.0"},
                 {"vnp_Command", "pay"},
@@ -49,7 +55,10 @@ namespace WalletService.Infrastructure.VNPay
 
             // Build query string
             var query = string.Join("&", inputData.Select(x => x.Key + "=" + HttpUtility.UrlEncode(x.Value)));
-            var signData = string.Join("&", inputData.Select(x => x.Key + "=" + x.Value));
+
+            // Build signData using same rules as callback validation: ordinal ordering, exclude empty values, raw (not URL-encoded) values
+            var filtered = inputData.Where(kv => !string.IsNullOrEmpty(kv.Value)).ToList();
+            var signData = string.Join("&", filtered.Select(x => x.Key + "=" + x.Value));
 
             // Tính chữ ký
             var vnp_SecureHash = HmacSHA512(vnp_HashSecret, signData);
@@ -60,19 +69,46 @@ namespace WalletService.Infrastructure.VNPay
 
         public bool ValidateCallback(Dictionary<string, string> callbackData)
         {
-            if (!callbackData.ContainsKey("vnp_SecureHash"))
+            if (!callbackData.TryGetValue("vnp_SecureHash", out var receivedHash) || string.IsNullOrEmpty(receivedHash))
+            {
+                _logger?.LogWarning("VNPay callback missing vnp_SecureHash.");
                 return false;
+            }
 
-            var receivedHash = callbackData["vnp_SecureHash"];
+            // Remove hash fields before building sign string
             callbackData.Remove("vnp_SecureHash");
             callbackData.Remove("vnp_SecureHashType");
 
-            var sortedData = new SortedDictionary<string, string>(callbackData);
-            var signData = string.Join("&", sortedData.Select(x => x.Key + "=" + x.Value));
+            // Ensure deterministic ordering (ordinal) and exclude empty values
+            var sortedData = new SortedDictionary<string, string>(callbackData, StringComparer.Ordinal);
+            var filtered = sortedData.Where(kv => !string.IsNullOrEmpty(kv.Value)).ToList();
+            var signData = string.Join("&", filtered.Select(x => x.Key + "=" + x.Value));
 
-            var computedHash = HmacSHA512(_config["VNPay:HashSecret"], signData);
+            var secret = _config["VNPay:HashSecret"];
+            if (string.IsNullOrEmpty(secret))
+            {
+                _logger?.LogError("VNPay HashSecret is empty in configuration. Cannot validate signature.");
+                return false;
+            }
 
-            return computedHash.Equals(receivedHash, StringComparison.OrdinalIgnoreCase);
+            var computedHash = HmacSHA512(secret, signData);
+
+            var ok = computedHash.Equals(receivedHash, StringComparison.OrdinalIgnoreCase);
+            if (!ok)
+            {
+                _logger?.LogWarning("VNPay signature mismatch. TxnRef: {txnRef}. SignData: {signData}. ComputedHash: {computedHash}. ReceivedHash: {receivedHash}.",
+                    sortedData.TryGetValue("vnp_TxnRef", out var r) ? r : string.Empty,
+                    signData,
+                    computedHash,
+                    receivedHash);
+            }
+            else
+            {
+                _logger?.LogInformation("VNPay signature validated successfully. TxnRef: {txnRef}",
+                    sortedData.TryGetValue("vnp_TxnRef", out var r2) ? r2 : string.Empty);
+            }
+
+            return ok;
         }
 
         private string HmacSHA512(string key, string data)
