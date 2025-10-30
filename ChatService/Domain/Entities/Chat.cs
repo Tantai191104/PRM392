@@ -6,9 +6,6 @@ namespace ChatService.Domain.Entities
 {
     public class Chat : BaseEntity
     {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public override string Id { get; set; } = ObjectId.GenerateNewId().ToString();
 
         [BsonElement("listing_id")]
         [BsonRepresentation(BsonType.ObjectId)]
