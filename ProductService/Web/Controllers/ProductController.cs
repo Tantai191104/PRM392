@@ -59,6 +59,7 @@ namespace ProductService.Web.Controllers
                     CycleCount = product.CycleCount,
                     Location = product.Location,
                     Warranty = product.Warranty,
+                    OwnerId = product.OwnerId,
                     Owner = owner ?? new OwnerDto { FullName = null, Email = null, Phone = null },
                     CreatedAt = product.CreatedAt,
                     UpdatedAt = product.UpdatedAt

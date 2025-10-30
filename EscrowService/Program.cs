@@ -36,6 +36,13 @@ builder.Services.AddSingleton<IWebhookRepository>(sp => new WebhookRepository(cl
 builder.Services.AddSingleton<IPaymentProvider, MockPaymentProvider>();
 
 // ===== DI - External Service Clients =====
+// Đăng ký WalletServiceClient với HttpClient và cấu hình BaseAddress
+var walletServiceBaseUrl = builder.Configuration["ExternalServices:WalletService:BaseUrl"] ?? "http://walletservice:5150";
+builder.Services.AddHttpClient<EscrowService.Infrastructure.ExternalServices.WalletServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(walletServiceBaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 builder.Services.AddHttpClient<IProductServiceClient, ProductServiceClient>(client =>
 {
     var baseUrl = builder.Configuration["ExternalServices:ProductService:BaseUrl"] ?? "http://productservice:5137";

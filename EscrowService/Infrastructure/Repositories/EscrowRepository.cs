@@ -32,7 +32,7 @@ namespace EscrowService.Infrastructure.Repositories
             var indexKeys1 = Builders<Escrow>.IndexKeys.Ascending(e => e.OrderId);
             var indexModel1 = new CreateIndexModel<Escrow>(indexKeys1);
 
-            var indexKeys2 = Builders<Escrow>.IndexKeys.Ascending(e => e.ListingId);
+            var indexKeys2 = Builders<Escrow>.IndexKeys.Ascending(e => e.ProductId);
             var indexModel2 = new CreateIndexModel<Escrow>(indexKeys2);
 
             var indexKeys3 = Builders<Escrow>.IndexKeys.Ascending(e => e.BuyerId);

@@ -14,9 +14,24 @@ var client = new MongoClient(mongoSettings["ConnectionString"]);
 string dbName = mongoSettings["DatabaseName"]!;
 
 // ===== DI =====
+
 builder.Services.AddSingleton(new UserRepository(client, dbName));
 builder.Services.AddSingleton<JwtService>();
-builder.Services.AddSingleton<AuthAppService>();
+
+// Đăng ký WalletClientService với HttpClient và cấu hình BaseAddress
+var walletServiceBaseUrl = builder.Configuration["ExternalServices__WalletService__BaseUrl"] ?? "http://walletservice:5150";
+builder.Services.AddHttpClient<WalletClientService>(client =>
+{
+    client.BaseAddress = new Uri(walletServiceBaseUrl);
+});
+
+builder.Services.AddSingleton<AuthAppService>(sp =>
+{
+    var userRepo = sp.GetRequiredService<UserRepository>();
+    var jwtService = sp.GetRequiredService<JwtService>();
+    var walletClient = sp.GetRequiredService<WalletClientService>();
+    return new AuthAppService(userRepo, jwtService, walletClient);
+});
 
 // ===== Controllers + Swagger =====
 builder.Services.AddControllers();

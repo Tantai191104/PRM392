@@ -1,17 +1,20 @@
 using EscrowService.Infrastructure.ExternalServices;
+using EscrowService.Infrastructure.Repositories;
 
 namespace EscrowService.Application.Saga.Steps
 {
     public class CreateOrderStep : ISagaStep
     {
-        private readonly IOrderServiceClient _orderClient;
-        private readonly ILogger<CreateOrderStep> _logger;
+    private readonly IOrderServiceClient _orderClient;
+    private readonly IEscrowRepository _escrowRepo;
+    private readonly ILogger<CreateOrderStep> _logger;
 
         public string StepName => "CreateOrder";
 
-        public CreateOrderStep(IOrderServiceClient orderClient, ILogger<CreateOrderStep> logger)
+        public CreateOrderStep(IOrderServiceClient orderClient, IEscrowRepository escrowRepo, ILogger<CreateOrderStep> logger)
         {
             _orderClient = orderClient;
+            _escrowRepo = escrowRepo;
             _logger = logger;
         }
 
@@ -20,7 +23,7 @@ namespace EscrowService.Application.Saga.Steps
             try
             {
                 // Call OrderService to create order
-                var orderId = await _orderClient.CreateOrderAsync(context.BuyerId, context.ListingId, context.EscrowId);
+                var orderId = await _orderClient.CreateOrderAsync(context.BuyerId, context.ProductId, context.EscrowId);
 
                 if (string.IsNullOrEmpty(orderId))
                 {
@@ -29,6 +32,14 @@ namespace EscrowService.Application.Saga.Steps
 
                 context.OrderId = orderId;
                 _logger.LogInformation("Created order {OrderId} for escrow {EscrowId}", orderId, context.EscrowId);
+
+                // Cập nhật OrderId vào escrow
+                var escrow = await _escrowRepo.GetByIdAsync(context.EscrowId);
+                if (escrow != null)
+                {
+                    escrow.OrderId = orderId;
+                    await _escrowRepo.UpdateAsync(escrow);
+                }
 
                 return SagaStepResult.Successful(new Dictionary<string, object>
                 {

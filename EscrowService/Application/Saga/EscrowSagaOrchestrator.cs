@@ -34,8 +34,8 @@ namespace EscrowService.Application.Saga
                 ActivatorUtilities.CreateInstance<CapturePaymentStep>(_serviceProvider)
             };
 
-            _logger.LogInformation("Starting Escrow Saga for Listing {ListingId}, Buyer {BuyerId}", 
-                context.ListingId, context.BuyerId);
+            _logger.LogInformation("Starting Escrow Saga for Listing {ListingId}, Buyer {BuyerId}",
+                context.ProductId, context.BuyerId);
 
             try
             {
@@ -43,20 +43,20 @@ namespace EscrowService.Application.Saga
                 foreach (var step in steps)
                 {
                     _logger.LogInformation("Executing saga step: {StepName}", step.StepName);
-                    
+
                     var stepResult = await step.ExecuteAsync(context);
-                    
+
                     if (stepResult.Success)
                     {
                         executedSteps.Push(step);
                         context.CompletedSteps.Add(step.StepName);
-                        
+
                         // Merge step data into shared context
                         foreach (var kvp in stepResult.Data)
                         {
                             context.SharedData[kvp.Key] = kvp.Value;
                         }
-                        
+
                         _logger.LogInformation("Step {StepName} completed successfully", step.StepName);
                     }
                     else
@@ -89,7 +89,7 @@ namespace EscrowService.Application.Saga
                 _logger.LogError(ex, "Unhandled exception in Saga execution");
                 result.Success = false;
                 result.ErrorMessage = $"Saga execution failed: {ex.Message}";
-                
+
                 // Compensate on exception
                 await CompensateAsync(executedSteps, context);
                 result.CompensationCompleted = true;
@@ -109,7 +109,7 @@ namespace EscrowService.Application.Saga
                 {
                     _logger.LogInformation("Compensating step: {StepName}", step.StepName);
                     var compensated = await step.CompensateAsync(context);
-                    
+
                     if (compensated)
                     {
                         _logger.LogInformation("Step {StepName} compensated successfully", step.StepName);

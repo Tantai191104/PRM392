@@ -29,15 +29,15 @@ namespace EscrowService.Application.Saga
 
     public class SagaContext
     {
-        public string EscrowId { get; set; } = string.Empty;
-        public string BuyerId { get; set; } = string.Empty;
-        public string SellerId { get; set; } = string.Empty;
-        public string ListingId { get; set; } = string.Empty;
-        public string? OrderId { get; set; }
-        public decimal Amount { get; set; }
-        public Dictionary<string, object> SharedData { get; set; } = new();
-        public List<string> CompletedSteps { get; set; } = new();
-        public List<string> Errors { get; set; } = new();
+    public string EscrowId { get; set; } = string.Empty;
+    public string BuyerId { get; set; } = string.Empty;
+    public string SellerId { get; set; } = string.Empty;
+    public string ProductId { get; set; } = string.Empty;
+    public string? OrderId { get; set; }
+    public decimal Amount { get; set; }
+    public Dictionary<string, object> SharedData { get; set; } = new();
+    public List<string> CompletedSteps { get; set; } = new();
+    public List<string> Errors { get; set; } = new();
     }
 }
 

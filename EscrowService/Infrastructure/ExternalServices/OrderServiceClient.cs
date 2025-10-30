@@ -20,23 +20,23 @@ namespace EscrowService.Infrastructure.ExternalServices
             {
                 var payload = new { productId = listingId, escrowId };
                 var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-                
+
                 // Add buyer ID header
                 _httpClient.DefaultRequestHeaders.Remove("X-User-Id");
                 _httpClient.DefaultRequestHeaders.Add("X-User-Id", buyerId);
-                
+
                 var response = await _httpClient.PostAsync("/api/orders", content);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
                     var result = JsonSerializer.Deserialize<JsonDocument>(json);
                     var orderId = result?.RootElement.GetProperty("id").GetString();
-                    
+
                     _logger.LogInformation("Created order {OrderId} for listing {ListingId}", orderId, listingId);
                     return orderId;
                 }
-                
+
                 _logger.LogWarning("Failed to create order: {StatusCode}", response.StatusCode);
                 return null;
             }
@@ -58,6 +58,30 @@ namespace EscrowService.Infrastructure.ExternalServices
             {
                 _logger.LogError(ex, "Error cancelling order {OrderId}", orderId);
                 return false;
+            }
+        }
+        public async Task<string?> GetOrderStatusAsync(string orderId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"/api/orders/status/{orderId}");
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var result = JsonSerializer.Deserialize<JsonDocument>(json);
+                    var status = result?.RootElement.GetProperty("status").GetString();
+
+                    _logger.LogInformation("Fetched status '{Status}' for order {OrderId}", status, orderId);
+                    return status;
+                }
+
+                _logger.LogWarning("Failed to get status for order {OrderId}: {StatusCode}", orderId, response.StatusCode);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting status for order {OrderId}", orderId);
+                return null;
             }
         }
     }

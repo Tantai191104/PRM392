@@ -1,15 +1,15 @@
 # =========================
 # 🧱 Build & Binary
 # =========================
-bin/
-obj/
-[Bb]uild/
-[Dd]ebug/
-[Rr]elease/
-x64/
-x86/
-[Aa][Rr][Mm]/
-[Aa][Rr][Mm]64/
+**/bin/
+**/obj/
+**/[Bb]uild/
+**/[Dd]ebug/
+**/[Rr]elease/
+**/x64/
+**/x86/
+**/[Aa][Rr][Mm]/
+**/[Aa][Rr][Mm]64/
 
 # =========================
 # 🧰 IDE & Editor configs
@@ -34,11 +34,11 @@ x86/
 *.seed
 *.cache
 *.tmp
-logs/
-data/
-storage/
-volumes/
-dump/
+**/logs/
+**/data/
+**/storage/
+**/volumes/
+**/dump/
 
 # =========================
 # ⚙️ Environment & Config
@@ -81,14 +81,35 @@ desktop.ini
 # =========================
 # 🪣 Publish outputs
 # =========================
-publish/
-dist/
-out/
-coverage/
+**/publish/
+**/dist/
+**/out/
+**/coverage/
 
 # =========================
 # 🔒 NodeJS Frontend (nếu có)
 # =========================
-node_modules/
-wwwroot/lib/
-wwwroot/dist/
+**/node_modules/
+**/wwwroot/lib/
+**/wwwroot/dist/
+
+# =========================
+# ⚙️ Git / Version Control
+# =========================
+.git/
+.gitignore
+.gitattributes
+
+# =========================
+# 📁 Project-level ignores
+# =========================
+*.zip
+*.rar
+*.tar.gz
+*.7z
+*.pdf
+*.mp4
+*.png
+*.jpg
+*.jpeg
+*.svg
