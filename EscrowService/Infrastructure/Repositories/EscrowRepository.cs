@@ -11,7 +11,7 @@ namespace EscrowService.Infrastructure.Repositories
         Task<List<Escrow>> GetByBuyerIdAsync(string buyerId);
         Task<List<Escrow>> GetBySellerIdAsync(string sellerId);
         Task<Escrow> UpdateAsync(Escrow escrow);
-        Task<List<Escrow>> GetAllAsync();
+    Task<List<Escrow>> GetAllAsync(string? status = null, string? buyerId = null, string? sellerId = null, string? orderId = null);
     }
 
     public class EscrowRepository : IEscrowRepository
@@ -81,9 +81,27 @@ namespace EscrowService.Infrastructure.Repositories
             return escrow;
         }
 
-        public async Task<List<Escrow>> GetAllAsync()
+        public async Task<List<Escrow>> GetAllAsync(string? status = null, string? buyerId = null, string? sellerId = null, string? orderId = null)
         {
-            return await _collection.Find(_ => true).ToListAsync();
+            var filterBuilder = Builders<Escrow>.Filter;
+            var filter = filterBuilder.Empty;
+            if (!string.IsNullOrEmpty(status))
+            {
+                if (Enum.TryParse<EscrowService.Domain.Entities.EscrowStatus>(status, true, out var statusEnum))
+                {
+                    filter &= filterBuilder.Eq(e => e.Status, statusEnum);
+                }
+            }
+            if (!string.IsNullOrEmpty(buyerId))
+                filter &= filterBuilder.Eq(e => e.BuyerId, buyerId);
+            if (!string.IsNullOrEmpty(sellerId))
+                filter &= filterBuilder.Eq(e => e.SellerId, sellerId);
+            if (!string.IsNullOrEmpty(orderId))
+                filter &= filterBuilder.Eq(e => e.OrderId, orderId);
+
+            // Sort by CreatedAt descending for admin dashboard
+            var sort = Builders<Escrow>.Sort.Descending(e => e.CreatedAt);
+            return await _collection.Find(filter).Sort(sort).ToListAsync();
         }
     }
 }

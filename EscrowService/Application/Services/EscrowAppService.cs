@@ -11,6 +11,9 @@ namespace EscrowService.Application.Services
     public interface IEscrowAppService
     {
         Task<EscrowResponseDto> CreateEscrowAsync(CreateEscrowDto dto, string buyerId);
+
+        Task<List<EscrowResponseDto>> GetAllEscrowsAsync(EscrowFilterDto filters);
+
         Task<EscrowResponseDto?> GetEscrowByIdAsync(string id);
         Task<EscrowResponseDto?> GetEscrowByOrderIdAsync(string orderId);
         Task<List<EscrowResponseDto>> GetEscrowsByBuyerAsync(string buyerId);
@@ -44,10 +47,20 @@ namespace EscrowService.Application.Services
             _paymentRepo = paymentRepo;
             _paymentProvider = paymentProvider;
             _sagaOrchestrator = sagaOrchestrator;
-            // Đã loại bỏ _orderServiceClient
             _logger = logger;
             _httpClientFactory = httpClientFactory;
             _loggerFactory = loggerFactory;
+        }
+        public async Task<List<EscrowResponseDto>> GetAllEscrowsAsync(EscrowFilterDto filters)
+        {
+            var escrows = await _escrowRepo.GetAllAsync(
+                status: filters.Status,
+                buyerId: filters.BuyerId,
+                sellerId: filters.SellerId,
+                orderId: filters.OrderId
+            );
+
+            return escrows.Select(MapToDto).ToList();
         }
 
         public async Task<EscrowResponseDto> CreateEscrowAsync(CreateEscrowDto dto, string buyerId)
