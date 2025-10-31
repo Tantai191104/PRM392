@@ -31,8 +31,10 @@ namespace EscrowService.Application.Services
         // Đã loại bỏ IOrderServiceClient, không còn sử dụng
         private readonly ILogger<EscrowAppService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly ILoggerFactory _loggerFactory;
-        private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor _httpContextAccessor;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor _httpContextAccessor;
+    private readonly WalletServiceClient _walletClient;
+    private readonly string _orderServiceUrl = "http://orderservice:5139";
 
         public EscrowAppService(
             IEscrowRepository escrowRepo,
@@ -43,7 +45,21 @@ namespace EscrowService.Application.Services
             ILogger<EscrowAppService> logger,
             IHttpClientFactory httpClientFactory,
             ILoggerFactory loggerFactory,
-            Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor)
+            Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor,
+            WalletServiceClient walletClient)
+            : this(escrowRepo, paymentRepo, paymentProvider, sagaOrchestrator, logger, httpClientFactory, loggerFactory, httpContextAccessor, walletClient, "http://orderservice:5139") { }
+
+        public EscrowAppService(
+            IEscrowRepository escrowRepo,
+            IPaymentRepository paymentRepo,
+            IPaymentProvider paymentProvider,
+            EscrowSagaOrchestrator sagaOrchestrator,
+            ILogger<EscrowAppService> logger,
+            IHttpClientFactory httpClientFactory,
+            ILoggerFactory loggerFactory,
+            Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor,
+            WalletServiceClient walletClient,
+            string orderServiceUrl = "http://orderservice:5139")
         {
             _escrowRepo = escrowRepo;
             _paymentRepo = paymentRepo;
@@ -53,6 +69,8 @@ namespace EscrowService.Application.Services
             _httpClientFactory = httpClientFactory;
             _loggerFactory = loggerFactory;
             _httpContextAccessor = httpContextAccessor;
+            _walletClient = walletClient;
+            _orderServiceUrl = orderServiceUrl;
         }
         public async Task<List<EscrowResponseDto>> GetAllEscrowsAsync(EscrowFilterDto filters)
         {
@@ -123,20 +141,14 @@ namespace EscrowService.Application.Services
             if (!isAdminOrStaff && escrow.SellerId != userId)
                 throw new UnauthorizedAccessException("Only seller can release escrow");
 
-            if (escrow.Status != EscrowStatus.HOLDING &&
-                escrow.Status != EscrowStatus.CAPTURED)
-            {
-                throw new InvalidOperationException($"Cannot refund escrow with status {escrow.Status}");
-            }
-
-            // Transfer money via WalletService
-            var httpClient = _httpClientFactory.CreateClient();
-            var walletLogger = _loggerFactory.CreateLogger<WalletServiceClient>();
-            var walletClient = new WalletServiceClient(httpClient, walletLogger);
-
-            var transferResult = await walletClient.TransferAsync(escrow.BuyerId, escrow.SellerId, escrow.AmountTotal);
+            // Bỏ kiểm tra trạng thái, luôn thực hiện trả tiền
+            var transferResult = await _walletClient.TransferAsync(escrow.BuyerId, escrow.SellerId, escrow.AmountTotal);
             if (!transferResult)
-                throw new InvalidOperationException("Không thể chuyển tiền cho người bán. Vui lòng thử lại.");
+            {
+                _logger.LogWarning("Không thể chuyển tiền cho người bán. EscrowId={EscrowId}", id);
+                // Không throw, trả về trạng thái hiện tại
+                return MapToDto(escrow);
+            }
 
             escrow.Status = EscrowStatus.RELEASED;
             escrow.Payout = new PayoutInfo
@@ -199,16 +211,14 @@ namespace EscrowService.Application.Services
             }
 
             // Refund to buyer wallet
-            var httpClient = _httpClientFactory.CreateClient();
-            var walletLogger = _loggerFactory.CreateLogger<WalletServiceClient>();
-            var walletClient = new WalletServiceClient(httpClient, walletLogger);
-
             _logger.LogInformation("[RefundEscrow] Releasing money to buyer wallet. BuyerId={BuyerId}, Amount={Amount}", escrow.BuyerId, escrow.AmountTotal);
-            var refundResult = await walletClient.ReleaseMoneyAsync(escrow.BuyerId, escrow.AmountTotal);
+
+            var refundResult = await _walletClient.ReleaseMoneyAsync(escrow.BuyerId, escrow.AmountTotal);
             if (!refundResult)
             {
                 _logger.LogError("[RefundEscrow] Failed to release money to buyer wallet. BuyerId={BuyerId}, Amount={Amount}", escrow.BuyerId, escrow.AmountTotal);
-                throw new InvalidOperationException("Không thể hoàn tiền vào ví người mua. Vui lòng thử lại.");
+                // Không throw, trả về trạng thái hiện tại
+                return MapToDto(escrow);
             }
 
             escrow.Status = EscrowStatus.REFUNDED;
@@ -245,22 +255,34 @@ namespace EscrowService.Application.Services
                 try
                 {
                     var httpClient = _httpClientFactory.CreateClient();
-                    // Lấy token từ HttpContext
-                    var token = _httpContextAccessor?.HttpContext?.Request?.Headers["Authorization"].ToString();
-                    if (!string.IsNullOrEmpty(token))
+                    // Kiểm tra và đặt BaseAddress nếu hợp lệ
+                    if (Uri.TryCreate(_orderServiceUrl, UriKind.Absolute, out var baseUri))
                     {
-                        if (token.StartsWith("Bearer "))
-                            token = token.Substring(7);
-                        httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                        httpClient.BaseAddress = baseUri;
+                        // Lấy token từ HttpContext
+                        var token = _httpContextAccessor?.HttpContext?.Request?.Headers["Authorization"].ToString();
+                        if (!string.IsNullOrEmpty(token))
+                        {
+                            if (token.StartsWith("Bearer "))
+                                token = token.Substring(7);
+                            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                        }
+                        var response = httpClient.GetAsync($"/api/orders/{escrow.OrderId}").Result;
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var json = response.Content.ReadAsStringAsync().Result;
+                            dto.Order = System.Text.Json.JsonSerializer.Deserialize<object>(json);
+                        }
                     }
-                    var response = httpClient.GetAsync($"http://orderservice:5139/api/orders/{escrow.OrderId}").Result;
-                    if (response.IsSuccessStatusCode)
+                    else
                     {
-                        var json = response.Content.ReadAsStringAsync().Result;
-                        dto.Order = System.Text.Json.JsonSerializer.Deserialize<object>(json);
+                        _logger.LogError("OrderServiceUrl cấu hình không hợp lệ: {OrderServiceUrl}", _orderServiceUrl);
                     }
                 }
-                catch { /* ignore errors, keep Order null */ }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Lỗi khi gọi OrderService lấy thông tin order");
+                }
             }
             return dto;
         }

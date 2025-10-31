@@ -185,66 +185,68 @@ namespace EscrowService.Web.Controllers
         /// Release escrow to seller
         /// </summary>
         [HttpPost("{id}/release")]
-        [Authorize]
+        [Authorize] // Chỉ cần JWT Bearer
         public async Task<IActionResult> ReleaseEscrow(string id, [FromBody] ReleaseEscrowDto dto)
         {
-            try
-            {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                             ?? User.FindFirst("sub")?.Value;
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                         ?? User.FindFirst("sub")?.Value;
 
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized();
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { success = false, message = "User not authenticated" });
 
-                var escrow = await _escrowService.ReleaseEscrowAsync(id, userId, dto);
-                return Ok(new { success = true, message = "Escrow released to seller", data = escrow });
-            }
-            catch (UnauthorizedAccessException ex)
+            var escrow = await _escrowService.GetEscrowByIdAsync(id);
+            if (escrow == null)
+                return NotFound(new { success = false, message = "Escrow not found" });
+
+            // Chỉ seller hoặc admin/staff mới release
+            var isAdminOrStaff = User.IsInRole("Admin") || User.IsInRole("Staff");
+            if (!isAdminOrStaff && userId != escrow.SellerId)
+                return Forbid();
+
+            var resultBefore = await _escrowService.GetEscrowByIdAsync(id);
+            var resultAfter = await _escrowService.ReleaseEscrowAsync(id, userId, dto, isAdminOrStaff);
+
+            // Nếu trạng thái escrow không đổi (chuyển tiền thất bại), trả về success=false
+            if (resultBefore != null && resultAfter != null && resultBefore.Status == resultAfter.Status)
             {
-                return Forbid(ex.Message);
+                return Ok(new { success = false, message = "Không thể chuyển tiền cho người bán. Vui lòng thử lại.", data = resultAfter });
             }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { success = false, message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error releasing escrow {EscrowId}", id);
-                return StatusCode(500, new { success = false, message = "Internal server error" });
-            }
+            // Nếu chuyển tiền thành công (trạng thái thay đổi), trả về success=true
+            return Ok(new { success = true, message = "Escrow released to seller", data = resultAfter });
         }
 
         /// <summary>
         /// Refund escrow to buyer
         /// </summary>
         [HttpPost("{id}/refund")]
-        [Authorize]
+        [Authorize] // Chỉ cần JWT Bearer
         public async Task<IActionResult> RefundEscrow(string id, [FromBody] RefundEscrowDto dto)
         {
-            try
-            {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                             ?? User.FindFirst("sub")?.Value;
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                         ?? User.FindFirst("sub")?.Value;
 
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized();
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { success = false, message = "User not authenticated" });
 
-                var escrow = await _escrowService.RefundEscrowAsync(id, userId, dto);
-                return Ok(new { success = true, message = "Escrow refunded to buyer", data = escrow });
-            }
-            catch (UnauthorizedAccessException ex)
+            var escrow = await _escrowService.GetEscrowByIdAsync(id);
+            if (escrow == null)
+                return NotFound(new { success = false, message = "Escrow not found" });
+
+            // Chỉ buyer hoặc admin/staff mới refund
+            var isAdminOrStaff = User.IsInRole("Admin") || User.IsInRole("Staff");
+            if (!isAdminOrStaff && userId != escrow.BuyerId)
+                return Forbid();
+
+            var resultBefore = await _escrowService.GetEscrowByIdAsync(id);
+            var resultAfter = await _escrowService.RefundEscrowAsync(id, userId, dto, isAdminOrStaff);
+
+            // Nếu trạng thái escrow không đổi (hoàn tiền thất bại), trả về success=false
+            if (resultBefore != null && resultAfter != null && resultBefore.Status == resultAfter.Status)
             {
-                return Forbid(ex.Message);
+                return Ok(new { success = false, message = "Không thể hoàn tiền cho người mua. Vui lòng thử lại.", data = resultAfter });
             }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(new { success = false, message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error refunding escrow {EscrowId}", id);
-                return StatusCode(500, new { success = false, message = "Internal server error" });
-            }
+            // Nếu hoàn tiền thành công (trạng thái thay đổi), trả về success=true
+            return Ok(new { success = true, message = "Escrow refunded to buyer", data = resultAfter });
         }
     }
 }

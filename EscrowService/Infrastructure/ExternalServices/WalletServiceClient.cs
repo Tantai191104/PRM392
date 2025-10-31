@@ -18,14 +18,14 @@ namespace EscrowService.Infrastructure.ExternalServices
         {
             var payload = new { UserId = userId, Amount = amount };
             var content = new StringContent(JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("/api/wallet/release", content);
+            var response = await _httpClient.PostAsync("/api/wallets/release", content);
             return response.IsSuccessStatusCode;
         }
         public async Task<bool> TransferAsync(string fromUserId, string toUserId, decimal amount)
         {
             var payload = new { FromUserId = fromUserId, ToUserId = toUserId, Amount = amount };
             var content = new StringContent(JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("/api/wallet/transfer", content);
+            var response = await _httpClient.PostAsync("/api/wallets/transfer", content);
             return response.IsSuccessStatusCode;
         }
     }
