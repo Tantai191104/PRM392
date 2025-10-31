@@ -20,5 +20,10 @@ namespace WalletService.Infrastructure.Repositories
         {
             await _transactions.InsertOneAsync(transaction);
         }
+        // Trong Infrastructure/Repositories/TransactionRepository.cs
+        public async Task<bool> AnyByReferenceIdAsync(string referenceId)
+        {
+            return await _transactions.Find(t => t.ReferenceId == referenceId).AnyAsync();
+        }
     }
 }

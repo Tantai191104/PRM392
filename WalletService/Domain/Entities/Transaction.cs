@@ -10,5 +10,6 @@ namespace WalletService.Domain.Entities
         public string? Type { get; set; } // Deposit, Withdraw, Transfer
         public DateTime CreatedAt { get; set; }
         public string? Description { get; set; }
+        public string? ReferenceId { get; set; }
     }
 }

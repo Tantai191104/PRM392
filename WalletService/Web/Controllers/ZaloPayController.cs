@@ -1,13 +1,13 @@
+#nullable enable
+
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using WalletService.Application.Services;
 using WalletService.Domain.Entities;
-
-#nullable enable
 
 namespace WalletService.Web.Controllers
 {
@@ -18,6 +18,7 @@ namespace WalletService.Web.Controllers
         private readonly ZaloPayService _zalopayService;
         private readonly WalletAppService _walletAppService;
         private readonly TransactionService _transactionService;
+        private const string CallbackKey = "uUfsWgfLkRLzq6W2uNXTCxrfxs51auny";
 
         public ZaloPayController(
             ZaloPayService zalopayService,
@@ -36,119 +37,115 @@ namespace WalletService.Web.Controllers
             public string UserId { get; set; } = string.Empty;
         }
 
-        // ===================== CREATE ORDER =====================
         [HttpPost("create-order")]
         [AllowAnonymous]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto dto)
         {
             if (dto.Amount <= 0 || string.IsNullOrWhiteSpace(dto.Description) || string.IsNullOrWhiteSpace(dto.UserId))
-                return BadRequest(new { success = false, message = "Amount, Description and UserId are required" });
+                return BadRequest(new { success = false, message = "Invalid input." });
 
-            string callbackUrl = "https://3c11f853370e.ngrok-free.app/api/zalopay/callback";
+            const string callbackUrl = "https://3c11f853370e.ngrok-free.app/api/zalopay/callback";
 
-            var (success, error, appTransId, orderUrl) = await _zalopayService.CreateOrderAsync(dto.Amount, dto.Description, callbackUrl, dto.UserId);
-            if (success)
-            {
-                // Cộng tiền và ghi transaction ngay khi tạo order
-                var wallet = await _walletAppService.GetWalletByUserIdAsync(dto.UserId);
-                if (wallet != null)
-                {
-                    wallet.Balance += dto.Amount;
-                    await _walletAppService.UpdateWalletAsync(wallet);
+            var (success, error, appTransId, orderUrl) = await _zalopayService.CreateOrderAsync(
+                dto.Amount, dto.Description, callbackUrl, dto.UserId);
 
-                    var transaction = new Transaction
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        WalletId = wallet.Id,
-                        Amount = dto.Amount,
-                        Type = "Deposit",
-                        CreatedAt = DateTime.UtcNow,
-                        Description = $"ZaloPay deposit: {appTransId}"
-                    };
-                    await _transactionService.CreateTransactionAsync(transaction);
-                }
-                return Ok(new
-                {
-                    success = true,
-                    data = new
-                    {
-                        AppTransId = appTransId,
-                        OrderUrl = orderUrl
-                    }
-                });
-            }
-            else
-            {
-                return BadRequest(new { success = false, message = error ?? "Unknown error" });
-            }
+            return success
+                ? Ok(new { success = true, data = new { AppTransId = appTransId, OrderUrl = orderUrl } })
+                : BadRequest(new { success = false, message = error ?? "Create order failed." });
         }
 
-        // ===================== CALLBACK =====================
         [HttpPost("callback")]
         [AllowAnonymous]
         public async Task<IActionResult> Callback([FromBody] JsonElement body)
         {
             var result = new Dictionary<string, object>();
-            string key2 = "uUfsWgfLkRLzq6W2uNXTCxrfxs51auny"; // Thay bằng key2 của bạn
 
             try
             {
-                string dataStr = body.GetProperty("data").GetString() ?? "";
-                string reqMac = body.GetProperty("mac").GetString() ?? "";
+                string dataStr = body.GetProperty("data").GetString() ?? string.Empty;
+                string reqMac = body.GetProperty("mac").GetString() ?? string.Empty;
 
-                // Tính toán mac
-                string mac = ZaloPayHelper.ComputeHmacSHA256(key2, dataStr);
+                Console.WriteLine($"[ZLP][RAW DATA] {dataStr}"); // ← IN RA ĐỂ XEM
 
-                if (!reqMac.Equals(mac))
+                string mac = ZaloPayHelper.ComputeHmacSHA256(dataStr, CallbackKey);
+                if (!reqMac.Equals(mac, StringComparison.OrdinalIgnoreCase))
                 {
-                    // callback không hợp lệ
-                    result["returncode"] = -1;
-                    result["returnmessage"] = "mac not equal";
+                    result["return_code"] = -1;
+                    result["return_message"] = "mac not equal";
+                    return Ok(result);
                 }
-                else
+
+                var dataJson = JsonDocument.Parse(dataStr).RootElement;
+
+                // IN RA TẤT CẢ CÁC FIELD
+                foreach (var prop in dataJson.EnumerateObject())
                 {
-                    // Parse data
-                    var dataJson = JsonDocument.Parse(dataStr).RootElement;
-                    string appTransId = dataJson.GetProperty("apptransid").GetString() ?? "";
-                    long amount = dataJson.GetProperty("amount").GetInt64();
-                    string userId = dataJson.TryGetProperty("userid", out var userIdProp) ? userIdProp.GetString() ?? "" : "";
-                    string zpTransId = dataJson.TryGetProperty("zptransid", out var zpTransIdProp) ? zpTransIdProp.GetString() ?? "" : "";
-                    long serverTime = dataJson.TryGetProperty("servertime", out var serverTimeProp) ? serverTimeProp.GetInt64() : 0;
+                    Console.WriteLine($"[ZLP][FIELD] {prop.Name} = {prop.Value}");
+                }
 
-                    Console.WriteLine($"[ZLP][CALLBACK] appTransId={appTransId} userId={userId} amount={amount} zpTransId={zpTransId}");
+                string appTransId = dataJson.GetProperty("apptransid").GetString() ?? string.Empty;
+                int status = dataJson.GetProperty("status").GetInt32();
+                long amount = dataJson.GetProperty("amount").GetInt64();
 
-                    // Cộng tiền cho user
-                    if (!string.IsNullOrEmpty(userId))
+                // THỬ LẤY userid HOẶC appuser
+                string? userId = dataJson.TryGetProperty("userid", out var uid) ? uid.GetString() :
+                                dataJson.TryGetProperty("appuser", out var au) ? au.GetString() : null;
+
+                if (string.IsNullOrEmpty(userId))
+                {
+                    Console.WriteLine("[ZLP][ERROR] userId/appuser not found in callback!");
+                    result["return_code"] = 0;
+                    result["return_message"] = "missing userId";
+                    return Ok(result);
+                }
+
+                Console.WriteLine($"[ZLP][CALLBACK] appTransId={appTransId} | status={status} | amount={amount} | userId={userId}");
+
+                if (status == 1 && amount > 0)
+                {
+                    bool alreadyProcessed = await _transactionService.HasTransactionByReferenceIdAsync(appTransId);
+                    if (alreadyProcessed)
                     {
-                        bool credited = await _zalopayService.CheckAndCreditOrderAsync(appTransId, userId);
-                        if (credited)
-                        {
-                            var wallet = await _walletAppService.GetWalletByUserIdAsync(userId);
-                            if (wallet != null)
-                            {
-                                var transaction = new Transaction
-                                {
-                                    Id = Guid.NewGuid().ToString(),
-                                    WalletId = wallet.Id,
-                                    Amount = amount,
-                                    Type = "Deposit",
-                                    CreatedAt = DateTime.UtcNow,
-                                    Description = $"ZaloPay deposit: {appTransId}"
-                                };
-                                await _transactionService.CreateTransactionAsync(transaction);
-                                Console.WriteLine($"[Callback] Payment success: {appTransId}, amount: {amount}, user: {userId}");
-                            }
-                        }
+                        Console.WriteLine($"[ZLP] Duplicate ignored: {appTransId}");
                     }
+                    else
+                    {
+                        var wallet = await _walletAppService.GetWalletByUserIdAsync(userId);
+                        if (wallet == null)
+                        {
+                            Console.WriteLine($"[ZLP][ERROR] Wallet not found for userId: {userId}");
+                            result["return_code"] = 0;
+                            result["return_message"] = "wallet not found";
+                            return Ok(result);
+                        }
 
-                    result["returncode"] = 1;
-                    result["returnmessage"] = "success";
+                        wallet.Balance += amount;
+                        await _walletAppService.UpdateWalletAsync(wallet);
+
+                        var transaction = new Transaction
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            WalletId = wallet.Id,
+                            Amount = amount,
+                            Type = "Deposit",
+                            Description = $"ZaloPay deposit: {appTransId}",
+                            CreatedAt = DateTime.UtcNow,
+                            ReferenceId = appTransId
+                        };
+
+                        await _transactionService.CreateTransactionAsync(transaction);
+                        Console.WriteLine($"[ZLP] SUCCESS: +{amount} vào ví {userId}");
+                    }
                 }
+
+                result["return_code"] = 1;
+                result["return_message"] = "success";
             }
             catch (Exception ex)
             {
-                result["returncode"] = 0; // ZaloPay server sẽ callback lại (tối đa 3 lần)
-                result["returnmessage"] = ex.Message;
+                Console.WriteLine($"[ZLP][EXCEPTION] {ex.Message}\n{ex.StackTrace}");
+                result["return_code"] = 0;
+                result["return_message"] = "processing error";
             }
 
             return Ok(result);

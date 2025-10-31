@@ -20,5 +20,10 @@ namespace WalletService.Application.Services
         {
             await _transRepo.CreateAsync(transaction);
         }
+        // Trong TransactionService.cs
+        public async Task<bool> HasTransactionByReferenceIdAsync(string referenceId)
+        {
+            return await _transRepo.AnyByReferenceIdAsync(referenceId);
+        }
     }
 }
