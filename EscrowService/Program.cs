@@ -58,8 +58,24 @@ builder.Services.AddHttpClient<IOrderServiceClient, OrderServiceClient>(client =
 });
 
 // ===== DI - Application Services =====
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IEscrowAppService, EscrowAppService>();
+        builder.Services.AddHttpContextAccessor();
+        // Đăng ký DI cho EscrowAppService, inject WalletServiceClient và lấy OrderServiceUrl từ cấu hình đúng key
+        var orderServiceUrl = builder.Configuration["ExternalServices:OrderService:BaseUrl"] ?? "http://orderservice:5139";
+        builder.Services.AddScoped<IEscrowAppService>(provider =>
+        {
+            return new EscrowAppService(
+                provider.GetRequiredService<EscrowService.Infrastructure.Repositories.IEscrowRepository>(),
+                provider.GetRequiredService<EscrowService.Infrastructure.Repositories.IPaymentRepository>(),
+                provider.GetRequiredService<EscrowService.Infrastructure.Providers.IPaymentProvider>(),
+                provider.GetRequiredService<EscrowService.Application.Saga.EscrowSagaOrchestrator>(),
+                provider.GetRequiredService<ILogger<EscrowService.Application.Services.EscrowAppService>>(),
+                provider.GetRequiredService<IHttpClientFactory>(),
+                provider.GetRequiredService<ILoggerFactory>(),
+                provider.GetRequiredService<Microsoft.AspNetCore.Http.IHttpContextAccessor>(),
+                provider.GetRequiredService<EscrowService.Infrastructure.ExternalServices.WalletServiceClient>(),
+                orderServiceUrl
+            );
+        });
 builder.Services.AddScoped<EscrowSagaOrchestrator>();
 
 // ===== Controllers + Swagger =====
