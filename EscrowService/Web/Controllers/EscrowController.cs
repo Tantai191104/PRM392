@@ -171,12 +171,14 @@ namespace EscrowService.Web.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
-                var escrow = await _escrowService.ReleaseEscrowAsync(id, userId, dto);
+                var isAdminOrStaff = User.IsInRole("Admin") || User.IsInRole("Staff");
+
+                var escrow = await _escrowService.ReleaseEscrowAsync(id, userId, dto, isAdminOrStaff);
                 return Ok(new { success = true, message = "Escrow released to seller", data = escrow });
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { success = false, message = ex.Message });
             }
             catch (InvalidOperationException ex)
             {
@@ -204,12 +206,14 @@ namespace EscrowService.Web.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
-                var escrow = await _escrowService.RefundEscrowAsync(id, userId, dto);
+                var isAdminOrStaff = User.IsInRole("Admin") || User.IsInRole("Staff");
+
+                var escrow = await _escrowService.RefundEscrowAsync(id, userId, dto, isAdminOrStaff);
                 return Ok(new { success = true, message = "Escrow refunded to buyer", data = escrow });
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { success = false, message = ex.Message });
             }
             catch (InvalidOperationException ex)
             {

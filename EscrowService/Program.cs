@@ -141,8 +141,8 @@ app.UseCors();
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "EscrowService API V1");
-    c.RoutePrefix = string.Empty;
+    c.SwaggerEndpoint("/api/escrows/swagger/v1/swagger.json", "EscrowService API V1");
+    c.RoutePrefix = "api/escrows/swagger";
 });
 
 app.UseAuthentication();

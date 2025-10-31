@@ -21,20 +21,29 @@ namespace WalletService.Infrastructure.VNPay
             _logger = logger;
         }
 
+        /// <summary>
+        /// Tạo URL thanh toán VNPay
+        /// </summary>
         public VNPayResponseDTO CreatePaymentUrl(VNPayRequestDTO request)
         {
+            // Lấy config
             var vnp_Url = _config["VNPay:Url"];
             var vnp_TmnCode = _config["VNPay:TmnCode"];
             var vnp_HashSecret = _config["VNPay:HashSecret"];
-            var vnp_ReturnUrl = request.ReturnUrl ?? _config["VNPay:ReturnUrl"];
+            var vnp_ReturnUrl = string.IsNullOrEmpty(request.ReturnUrl) || request.ReturnUrl == "string"
+                ? _config["VNPay:ReturnUrl"]
+                : request.ReturnUrl;
 
+            // Chuẩn hóa số tiền (VND * 100)
             var vnp_Amount = Convert.ToInt64(Math.Round(request.Amount * 100)).ToString();
             var vnp_TxnRef = DateTime.Now.Ticks.ToString();
 
+            // Chuẩn hóa OrderInfo
             var vnp_OrderInfo = string.IsNullOrEmpty(request.OrderInfo)
                 ? $"UserId:{request.UserId}"
                 : $"UserId:{request.UserId}|{request.OrderInfo}";
 
+            // Dữ liệu thanh toán
             var inputData = new SortedDictionary<string, string>(StringComparer.Ordinal)
             {
                 {"vnp_Version", "2.1.0"},
@@ -51,21 +60,31 @@ namespace WalletService.Infrastructure.VNPay
                 {"vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss")}
             };
 
-            // Build query string
-            var query = string.Join("&", inputData.Select(x => x.Key + "=" + HttpUtility.UrlEncode(x.Value)));
+            // Tạo signData (không encode)
+            var signData = string.Join("&",
+                inputData.Where(kv => !string.IsNullOrEmpty(kv.Value))
+                         .Select(kv => $"{kv.Key}={kv.Value}"));
 
-            // Build signData (exclude null/empty values)
-            var filtered = inputData.Where(kv => !string.IsNullOrEmpty(kv.Value)).ToList();
-            var signData = string.Join("&", filtered.Select(x => x.Key + "=" + x.Value));
-
+            // Tính chữ ký HMACSHA512
             var vnp_SecureHash = HmacSHA512(vnp_HashSecret, signData);
+
+            // Build URL (encode giá trị)
+            var query = string.Join("&",
+                inputData.Select(kv => $"{kv.Key}={HttpUtility.UrlEncode(kv.Value)}"));
+
             var paymentUrl = $"{vnp_Url}?{query}&vnp_SecureHash={vnp_SecureHash}";
 
+            // Log để debug
             _logger?.LogInformation("VNPay PaymentUrl: {paymentUrl}", paymentUrl);
+            _logger?.LogInformation("VNPay signData for hash: {signData}", signData);
+            _logger?.LogInformation("VNPay computed hash: {vnp_SecureHash}", vnp_SecureHash);
 
             return new VNPayResponseDTO { PaymentUrl = paymentUrl };
         }
 
+        /// <summary>
+        /// Xác thực callback VNPay
+        /// </summary>
         public bool ValidateCallback(Dictionary<string, string> callbackData)
         {
             _logger?.LogInformation("VNPay callback raw data: {@callbackData}", callbackData);
@@ -80,29 +99,30 @@ namespace WalletService.Infrastructure.VNPay
             callbackData.Remove("vnp_SecureHash");
             callbackData.Remove("vnp_SecureHashType");
 
-            // Order & filter
-            var sortedData = new SortedDictionary<string, string>(callbackData, StringComparer.Ordinal);
-            var filtered = sortedData.Where(kv => !string.IsNullOrEmpty(kv.Value)).ToList();
-            var signData = string.Join("&", filtered.Select(x => x.Key + "=" + x.Value));
-
-            _logger?.LogInformation("VNPay ValidateCallback signData: {signData}", signData);
+            // Tạo signData từ callback (sắp xếp ASCII, không encode)
+            var signData = string.Join("&",
+                callbackData.Where(kv => !string.IsNullOrEmpty(kv.Value))
+                            .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                            .Select(kv => $"{kv.Key}={kv.Value}"));
 
             var secret = _config["VNPay:HashSecret"];
             if (string.IsNullOrEmpty(secret))
             {
-                _logger?.LogError("VNPay HashSecret is empty in configuration. Cannot validate signature.");
+                _logger?.LogError("VNPay HashSecret is empty in configuration.");
                 return false;
             }
 
             var computedHash = HmacSHA512(secret, signData);
 
-            _logger?.LogInformation("VNPay ValidateCallback computedHash: {computedHash}, receivedHash: {receivedHash}", computedHash, receivedHash);
+            _logger?.LogInformation("VNPay ValidateCallback signData: {signData}", signData);
+            _logger?.LogInformation("VNPay computedHash: {computedHash}, receivedHash: {receivedHash}", computedHash, receivedHash);
 
-            var ok = computedHash.Equals(receivedHash, StringComparison.OrdinalIgnoreCase);
-            if (!ok)
+            var isValid = string.Equals(computedHash, receivedHash, StringComparison.OrdinalIgnoreCase);
+
+            if (!isValid)
             {
                 _logger?.LogWarning("VNPay signature mismatch. TxnRef: {txnRef}. SignData: {signData}. ComputedHash: {computedHash}. ReceivedHash: {receivedHash}.",
-                    sortedData.TryGetValue("vnp_TxnRef", out var r) ? r : string.Empty,
+                    callbackData.TryGetValue("vnp_TxnRef", out var r) ? r : string.Empty,
                     signData,
                     computedHash,
                     receivedHash);
@@ -110,12 +130,15 @@ namespace WalletService.Infrastructure.VNPay
             else
             {
                 _logger?.LogInformation("VNPay signature validated successfully. TxnRef: {txnRef}",
-                    sortedData.TryGetValue("vnp_TxnRef", out var r2) ? r2 : string.Empty);
+                    callbackData.TryGetValue("vnp_TxnRef", out var r2) ? r2 : string.Empty);
             }
 
-            return ok;
+            return isValid;
         }
 
+        /// <summary>
+        /// HMACSHA512
+        /// </summary>
         private string HmacSHA512(string key, string data)
         {
             using var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(key));

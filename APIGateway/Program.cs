@@ -80,12 +80,11 @@ var ipRequestCounters = new ConcurrentDictionary<string, (int Count, DateTime Wi
 app.Use(async (context, next) =>
 {
     var remoteIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-
-    // Rate limit
     var now = DateTime.UtcNow;
+
     ipRequestCounters.AddOrUpdate(remoteIp,
-        addValueFactory: _ => (1, now),
-        updateValueFactory: (_, old) =>
+        _ => (1, now),
+        (_, old) =>
         {
             if ((now - old.WindowStart) > rateLimitWindow)
                 return (1, now);
@@ -110,10 +109,13 @@ app.Use(async (context, next) =>
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "API Gateway v1");
+    c.RoutePrefix = "swagger";
+    c.DisplayRequestDuration();
+    c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.List);
+    c.DefaultModelsExpandDepth(-1);
 
+    // Các service downstream hiển thị trong UI
     var downstreamList = downstream
-        .Where(kv => !kv.Key.Equals("ai", StringComparison.OrdinalIgnoreCase))
         .OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
         .Select(kv => new
         {
@@ -131,14 +133,8 @@ app.UseSwaggerUI(c =>
 
     foreach (var item in downstreamList)
     {
-        var label = FriendlyLabel(item.Key);
-        c.SwaggerEndpoint(item.Url, $"{label} (proxied)");
+        c.SwaggerEndpoint(item.Url, $"{FriendlyLabel(item.Key)} (proxied)");
     }
-
-    c.RoutePrefix = "swagger";
-    c.DisplayRequestDuration();
-    c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.List);
-    c.DefaultModelsExpandDepth(-1);
 });
 
 // =============================
@@ -158,7 +154,7 @@ app.MapReverseProxy();
 app.Lifetime.ApplicationStarted.Register(() =>
 {
     Console.WriteLine("APIGateway started with the following downstream mappings:");
-    foreach (var kv in downstream.Where(kv => !kv.Key.Equals("ai", StringComparison.OrdinalIgnoreCase)))
+    foreach (var kv in downstream)
     {
         Console.WriteLine($" - {kv.Key} => {kv.Value}");
     }
