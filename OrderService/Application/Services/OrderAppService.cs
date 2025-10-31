@@ -11,7 +11,7 @@ namespace OrderService.Application.Services
     {
         Task<Product?> GetProductForOrderAsync(string productId);
         Task<bool> UpdateProductStatusAsync(string productId, string status);
-        Task<OrderResponseDto> CreateOrderAsync(OrderDto dto, string buyerId);
+        Task<OrderResponseDto> CreateOrderAsync(OrderDto dto, string buyerId, string? jwtToken);
         Task<OrderResponseDto?> GetOrderByIdAsync(string id);
         Task<List<OrderResponseDto>> GetOrdersByBuyerAsync(string buyerId);
         Task<List<OrderResponseDto>> GetOrdersBySellerAsync(string sellerId);
@@ -29,6 +29,7 @@ namespace OrderService.Application.Services
         private readonly IProductService _productService;
         private readonly string _productServiceBaseUrl;
         private readonly WalletServiceClient _walletClient;
+        private readonly EscrowServiceClient _escrowServiceClient;
 
         public OrderAppService(
             IMongoDatabase database,
@@ -36,7 +37,8 @@ namespace OrderService.Application.Services
             IAuthService authService,
             IProductService productService,
             IConfiguration config,
-            WalletServiceClient walletClient)
+            WalletServiceClient walletClient,
+            EscrowServiceClient escrowServiceClient)
         {
             _orders = database.GetCollection<Order>("Orders");
             _httpClientFactory = httpClientFactory;
@@ -45,6 +47,7 @@ namespace OrderService.Application.Services
             _productServiceBaseUrl = config["ExternalServices:ProductService:BaseUrl"]
                 ?? "http://productservice:5137";
             _walletClient = walletClient;
+            _escrowServiceClient = escrowServiceClient;
         }
 
         public async Task<Product?> GetProductForOrderAsync(string productId)
@@ -150,7 +153,7 @@ namespace OrderService.Application.Services
             };
         }
 
-        public async Task<OrderResponseDto> CreateOrderAsync(OrderDto dto, string buyerId)
+        public async Task<OrderResponseDto> CreateOrderAsync(OrderDto dto, string buyerId, string? jwtToken)
         {
             var product = await GetProductAsync(dto.ProductId);
 
@@ -206,8 +209,6 @@ namespace OrderService.Application.Services
             // Tích hợp gọi EscrowService, truyền đúng OrderId và ProductId
             try
             {
-                var escrowClient = _httpClientFactory.CreateClient();
-                var escrowServiceUrl = "http://escrowservice:5141/api/escrows";
                 var escrowDto = new
                 {
                     OrderId = order.Id,
@@ -215,7 +216,7 @@ namespace OrderService.Application.Services
                     SellerId = seller.Id,
                     Amount = totalAmount
                 };
-                var escrowResp = await escrowClient.PostAsJsonAsync(escrowServiceUrl, escrowDto);
+                var escrowResp = await _escrowServiceClient.CreateEscrowAsync(escrowDto, jwtToken ?? string.Empty);
                 if (!escrowResp.IsSuccessStatusCode)
                 {
                     var err = await escrowResp.Content.ReadAsStringAsync();

@@ -45,7 +45,14 @@ namespace OrderService.Web.Controllers
                 if (product.OwnerId == userId)
                     return BadRequest(new { success = false, message = "You cannot order your own product" });
 
-                var result = await _orderAppService.CreateOrderAsync(dto, userId);
+                // Lấy JWT từ header Authorization
+                var jwtToken = Request.Headers["Authorization"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(jwtToken) && jwtToken.StartsWith("Bearer "))
+                {
+                    jwtToken = jwtToken.Substring(7);
+                }
+
+                var result = await _orderAppService.CreateOrderAsync(dto, userId, jwtToken);
                 return Ok(new { success = true, message = "Order created successfully", data = result });
             }
             catch (MongoDB.Driver.MongoWriteException ex)
@@ -199,7 +206,6 @@ namespace OrderService.Web.Controllers
             }
         }
         [HttpGet("status/{orderId}")]
-        [Authorize]
         public async Task<IActionResult> GetOrderStatus(string orderId)
         {
             var order = await _orderAppService.GetOrderByIdAsync(orderId);

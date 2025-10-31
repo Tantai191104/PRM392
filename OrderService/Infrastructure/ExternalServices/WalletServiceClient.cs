@@ -13,7 +13,7 @@ namespace OrderService.Infrastructure.ExternalServices
         }
         public async Task<decimal?> GetBalanceAsync(string userId)
         {
-            var response = await _httpClient.GetAsync($"/api/wallets/user/{userId}");
+            var response = await _httpClient.GetAsync($"/api/wallets/users/{userId}");
             if (!response.IsSuccessStatusCode) return null;
             var json = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);

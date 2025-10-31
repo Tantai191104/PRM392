@@ -36,6 +36,12 @@ namespace EscrowService.Infrastructure.Repositories
         public async Task<Payment> CreateAsync(Payment payment)
         {
             payment.CreatedAt = DateTime.UtcNow;
+            var existing = await GetByIntentIdAsync(payment.Provider, payment.IntentId);
+            if (existing != null)
+            {
+                // Nếu đã tồn tại, trả về payment cũ
+                return existing;
+            }
             await _collection.InsertOneAsync(payment);
             return payment;
         }

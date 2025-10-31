@@ -30,7 +30,6 @@ namespace EscrowService.Application.Saga
                 ActivatorUtilities.CreateInstance<CreateEscrowStep>(_serviceProvider),
                 ActivatorUtilities.CreateInstance<AuthorizePaymentStep>(_serviceProvider),
                 ActivatorUtilities.CreateInstance<ReserveListingStep>(_serviceProvider),
-                ActivatorUtilities.CreateInstance<CreateOrderStep>(_serviceProvider),
                 ActivatorUtilities.CreateInstance<CapturePaymentStep>(_serviceProvider)
             };
 
