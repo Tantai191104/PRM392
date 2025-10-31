@@ -18,7 +18,32 @@ namespace EscrowService.Web.Controllers
             _escrowService = escrowService;
             _logger = logger;
         }
+        /// <summary>
+        /// Get all escrows with filter (admin only)
+        /// </summary>
+        [HttpGet]
+        [Authorize(Roles = "Admin , Staff")]
+        public async Task<IActionResult> GetAllEscrows([FromQuery] string? status, [FromQuery] string? buyerId, [FromQuery] string? sellerId, [FromQuery] string? orderId)
+        {
+            try
+            {
+                var filters = new EscrowFilterDto
+                {
+                    Status = status,
+                    BuyerId = buyerId,
+                    SellerId = sellerId,
+                    OrderId = orderId
+                };
 
+                var escrows = await _escrowService.GetAllEscrowsAsync(filters);
+                return Ok(new { success = true, data = escrows, count = escrows.Count });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting all escrows (admin)");
+                return StatusCode(500, new { success = false, message = "Internal server error" });
+            }
+        }
         /// <summary>
         /// Create escrow (initiates Saga)
         /// </summary>
@@ -171,14 +196,12 @@ namespace EscrowService.Web.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
-                var isAdminOrStaff = User.IsInRole("Admin") || User.IsInRole("Staff");
-
-                var escrow = await _escrowService.ReleaseEscrowAsync(id, userId, dto, isAdminOrStaff);
+                var escrow = await _escrowService.ReleaseEscrowAsync(id, userId, dto);
                 return Ok(new { success = true, message = "Escrow released to seller", data = escrow });
             }
             catch (UnauthorizedAccessException ex)
             {
-                return StatusCode(403, new { success = false, message = ex.Message });
+                return Forbid(ex.Message);
             }
             catch (InvalidOperationException ex)
             {
@@ -206,14 +229,12 @@ namespace EscrowService.Web.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
-                var isAdminOrStaff = User.IsInRole("Admin") || User.IsInRole("Staff");
-
-                var escrow = await _escrowService.RefundEscrowAsync(id, userId, dto, isAdminOrStaff);
+                var escrow = await _escrowService.RefundEscrowAsync(id, userId, dto);
                 return Ok(new { success = true, message = "Escrow refunded to buyer", data = escrow });
             }
             catch (UnauthorizedAccessException ex)
             {
-                return StatusCode(403, new { success = false, message = ex.Message });
+                return Forbid(ex.Message);
             }
             catch (InvalidOperationException ex)
             {
