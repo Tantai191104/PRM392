@@ -1,63 +1,54 @@
-using System;
-using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using MongoDB.Driver;
+using System.Text;
+using System;
 using WalletService.Application.Services;
 using WalletService.Infrastructure.Repositories;
-using WalletService.Infrastructure.VNPay;
 using WalletService.Infrastructure.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ==============================
-// 🌍 Add core services
-// ==============================
+// -------------------------
+// Add services
+// -------------------------
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
-    {
-        Title = "WalletService API",
-        Version = "v1",
-        Description = "API cho hệ thống ví điện tử, giao dịch và VNPay tích hợp."
-    });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "WalletService API", Version = "v1" });
 });
 
-// ==============================
-// ⚙️ Configuration binding
-// ==============================
-builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
-// Note: appsettings.json uses the "VNPay" section. Bind VNPaySettings from that section.
-builder.Services.Configure<VNPaySettings>(builder.Configuration.GetSection("VNPay"));
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+// -------------------------
+// MongoDB
+// -------------------------
 
-// ==============================
-// 🍃 MongoDB setup
-// ==============================
+builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
 builder.Services.AddSingleton<IMongoClient>(sp =>
 {
-    var settings = builder.Configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>();
-    return new MongoClient(settings?.ConnectionString);
+    var settings = sp.GetRequiredService<IConfiguration>().GetSection("MongoDbSettings").Get<MongoDbSettings>();
+    return new MongoClient(settings?.ConnectionString ?? throw new InvalidOperationException("Mongo ConnectionString is missing"));
 });
 
-builder.Services.AddScoped<IMongoDatabase>(sp =>
+builder.Services.AddScoped(sp =>
 {
     var client = sp.GetRequiredService<IMongoClient>();
-    var settings = builder.Configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>();
-    return client.GetDatabase(settings?.DatabaseName);
+    var settings = sp.GetRequiredService<IConfiguration>().GetSection("MongoDbSettings").Get<MongoDbSettings>();
+    return client.GetDatabase(settings?.DatabaseName ?? throw new InvalidOperationException("Mongo DatabaseName is missing"));
 });
 
-// ==============================
-// 🔐 JWT Authentication (optional)
-// ==============================
+// -------------------------
+// JWT Authentication
+// -------------------------
+
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
-if (!string.IsNullOrEmpty(jwtSettings?.SecretKey))
+if (jwtSettings != null && !string.IsNullOrEmpty(jwtSettings.SecretKey))
 {
     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
@@ -75,50 +66,33 @@ if (!string.IsNullOrEmpty(jwtSettings?.SecretKey))
         });
 }
 
-// ==============================
-// 🧩 Dependency Injection
-// ==============================
+// -------------------------
+// DI services
+// -------------------------
+
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<WalletRepository>();
 builder.Services.AddScoped<TransactionRepository>();
 builder.Services.AddScoped<WalletAppService>();
 builder.Services.AddScoped<TransactionService>();
-builder.Services.AddScoped<IVnPayService, VNPayService>();
+builder.Services.AddScoped<ZaloPayService>();
 
-
-// ==============================
-// 🩺 Health checks
-// ==============================
 builder.Services.AddHealthChecks();
+
+// -------------------------
+// Build & middleware
+// -------------------------
 
 var app = builder.Build();
 
-// ==============================
-// 🚀 Middleware pipeline
-// ==============================
 app.UseSwagger();
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "WalletService API v1");
-    c.RoutePrefix = "swagger";
-});
+app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "WalletService API v1"));
 
 app.UseHttpsRedirection();
-
-app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
-app.MapGet("/health/simple", () =>
-    Results.Json(new
-    {
-        status = "ok",
-        service = "WalletService",
-        environment = app.Environment.EnvironmentName,
-        timestamp = DateTime.UtcNow
-    })
-);
 
 app.Run();
