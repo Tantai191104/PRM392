@@ -16,13 +16,13 @@ namespace WalletService.Web.Controllers
     [Route("api/vnpay")]
     public class VNPayController : ControllerBase
     {
-        private readonly VNPayService _vnpayService;
+        private readonly IVnPayService _vnpayService;
         private readonly WalletAppService _walletService;
         private readonly TransactionService _transactionService;
         private readonly ILogger<VNPayController> _logger;
 
         public VNPayController(
-            VNPayService vnpayService,
+            IVnPayService vnpayService,
             WalletAppService walletService,
             TransactionService transactionService,
             ILogger<VNPayController> logger)
@@ -47,7 +47,14 @@ namespace WalletService.Web.Controllers
             }
 
             // Sử dụng phương thức async của VNPayService
-            var response = await _vnpayService.CreatePaymentUrlAsync(request);
+            var paymentInfo = new PaymentInformationModel
+            {
+                Amount = (double)request.Amount,
+                Name = request.UserId, // or set to a default value
+                OrderDescription = request.OrderDescription ?? string.Empty,
+                OrderType = request.OrderType ?? "140000"
+            };
+            var response = await _vnpayService.CreatePaymentUrlAsync(paymentInfo, HttpContext);
             return Ok(response);
         }
 
@@ -59,7 +66,7 @@ namespace WalletService.Web.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> VNPayCallback()
         {
-            var callbackData = Request.Query.ToDictionary(x => x.Key, x => x.Value.ToString());
+            var callbackData = Request.Query;
 
             // Log để debug
             _logger?.LogInformation("VNPay callback HTTP {method} received. QueryString: {qs}. Content-Type: {ct}",
@@ -67,12 +74,10 @@ namespace WalletService.Web.Controllers
                 Request.QueryString.HasValue ? Request.QueryString.Value : string.Empty,
                 Request.ContentType ?? string.Empty);
 
-            if (!callbackData.Any() && Request.HasFormContentType)
-            {
-                var form = await Request.ReadFormAsync();
-                callbackData = form.ToDictionary(x => x.Key, x => x.Value.ToString());
-                _logger?.LogInformation("VNPay callback parameters found in form body. Keys: {keys}", string.Join(',', callbackData.Keys));
-            }
+            // If no query params and form content type, fallback to form
+            // Only use query params for callback validation
+            // If you need to support form data, handle it separately as a dictionary
+            // Remove any attempt to cast IFormCollection to IQueryCollection
 
             // Validate signature
             if (!_vnpayService.ValidateCallback(callbackData))
@@ -84,12 +89,12 @@ namespace WalletService.Web.Controllers
                 });
             }
 
-            var responseCode = callbackData.GetValueOrDefault("vnp_ResponseCode", "");
-            var txnRef = callbackData.GetValueOrDefault("vnp_TxnRef", "");
-            var amount = callbackData.GetValueOrDefault("vnp_Amount", "0");
-            var bankCode = callbackData.GetValueOrDefault("vnp_BankCode", "");
-            var transactionNo = callbackData.GetValueOrDefault("vnp_TransactionNo", "");
-            var orderInfo = callbackData.GetValueOrDefault("vnp_OrderInfo", "");
+            var responseCode = callbackData.ContainsKey("vnp_ResponseCode") ? callbackData["vnp_ResponseCode"].ToString() : "";
+            var txnRef = callbackData.ContainsKey("vnp_TxnRef") ? callbackData["vnp_TxnRef"].ToString() : "";
+            var amount = callbackData.ContainsKey("vnp_Amount") ? callbackData["vnp_Amount"].ToString() : "0";
+            var bankCode = callbackData.ContainsKey("vnp_BankCode") ? callbackData["vnp_BankCode"].ToString() : "";
+            var transactionNo = callbackData.ContainsKey("vnp_TransactionNo") ? callbackData["vnp_TransactionNo"].ToString() : "";
+            var orderInfo = callbackData.ContainsKey("vnp_OrderInfo") ? callbackData["vnp_OrderInfo"].ToString() : "";
 
             if (responseCode != "00")
             {

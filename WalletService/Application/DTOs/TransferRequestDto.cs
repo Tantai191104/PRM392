@@ -1,3 +1,4 @@
+#nullable enable
 namespace WalletService.Application.DTOs
 {
     public class TransferRequestDto

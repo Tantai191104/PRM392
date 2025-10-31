@@ -152,7 +152,7 @@ namespace OrderService.Web.Controllers
             try
             {
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var userName = User.Identity?.Name ?? "Unknown";
+                var userName = User.FindFirst(ClaimTypes.Email)?.Value ?? "Unknown";
 
                 if (string.IsNullOrWhiteSpace(userId))
                     return Unauthorized(new { success = false, message = "Missing or invalid user ID" });
@@ -174,7 +174,7 @@ namespace OrderService.Web.Controllers
         public async Task<IActionResult> CancelOrder(string id)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var userName = User.Identity?.Name ?? "Unknown";
+            var userName = User.FindFirst(ClaimTypes.Email)?.Value ?? "Unknown";
 
             if (string.IsNullOrWhiteSpace(userId))
                 return Unauthorized();
