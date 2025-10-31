@@ -15,8 +15,8 @@ namespace EscrowService.Application.Services
         Task<EscrowResponseDto?> GetEscrowByOrderIdAsync(string orderId);
         Task<List<EscrowResponseDto>> GetEscrowsByBuyerAsync(string buyerId);
         Task<List<EscrowResponseDto>> GetEscrowsBySellerAsync(string sellerId);
-        Task<EscrowResponseDto> ReleaseEscrowAsync(string id, string userId, ReleaseEscrowDto dto);
-        Task<EscrowResponseDto> RefundEscrowAsync(string id, string userId, RefundEscrowDto dto);
+        Task<EscrowResponseDto> ReleaseEscrowAsync(string id, string userId, ReleaseEscrowDto dto, bool isAdminOrStaff = false);
+        Task<EscrowResponseDto> RefundEscrowAsync(string id, string userId, RefundEscrowDto dto, bool isAdminOrStaff = false);
     }
 
     public class EscrowAppService : IEscrowAppService
@@ -97,19 +97,20 @@ namespace EscrowService.Application.Services
             return escrows.Select(MapToDto).ToList();
         }
 
-        public async Task<EscrowResponseDto> ReleaseEscrowAsync(string id, string userId, ReleaseEscrowDto dto)
+        public async Task<EscrowResponseDto> ReleaseEscrowAsync(string id, string userId, ReleaseEscrowDto dto, bool isAdminOrStaff = false)
         {
             var escrow = await _escrowRepo.GetByIdAsync(id);
             if (escrow == null)
                 throw new ArgumentException("Escrow not found");
 
-            if (escrow.SellerId != userId)
+            if (!isAdminOrStaff && escrow.SellerId != userId)
                 throw new UnauthorizedAccessException("Only seller can release escrow");
 
-            if (escrow.Status != EscrowStatus.HOLDING)
-                throw new InvalidOperationException($"Cannot release escrow with status {escrow.Status}");
-
-            // Bỏ kiểm tra trạng thái đơn hàng từ OrderService
+            if (escrow.Status != EscrowStatus.HOLDING &&
+                escrow.Status != EscrowStatus.CAPTURED)
+            {
+                throw new InvalidOperationException($"Cannot refund escrow with status {escrow.Status}");
+            }
 
             // Transfer money via WalletService
             var httpClient = _httpClientFactory.CreateClient();
@@ -134,23 +135,36 @@ namespace EscrowService.Application.Services
 
             return MapToDto(escrow);
         }
-        public async Task<EscrowResponseDto> RefundEscrowAsync(string id, string userId, RefundEscrowDto dto)
+        public async Task<EscrowResponseDto> RefundEscrowAsync(string id, string userId, RefundEscrowDto dto, bool isAdminOrStaff = false)
         {
+            _logger.LogInformation("[RefundEscrow] Start refund for escrowId={EscrowId}, userId={UserId}", id, userId);
             var escrow = await _escrowRepo.GetByIdAsync(id);
             if (escrow == null)
+            {
+                _logger.LogWarning("[RefundEscrow] Escrow not found: {EscrowId}", id);
                 throw new ArgumentException("Escrow not found");
+            }
+
+            _logger.LogInformation("[RefundEscrow] Escrow found. BuyerId={BuyerId}, Status={Status}", escrow.BuyerId, escrow.Status);
 
             // Bỏ kiểm tra trạng thái đơn hàng từ OrderService
 
-            if (escrow.BuyerId != userId)
+            if (!isAdminOrStaff && escrow.BuyerId != userId)
+            {
+                _logger.LogWarning("[RefundEscrow] Unauthorized refund attempt. Escrow.BuyerId={BuyerId}, userId={UserId}", escrow.BuyerId, userId);
                 throw new UnauthorizedAccessException("Only buyer can request refund");
+            }
 
             if (escrow.Status != EscrowStatus.HOLDING)
+            {
+                _logger.LogWarning("[RefundEscrow] Invalid escrow status for refund. Status={Status}", escrow.Status);
                 throw new InvalidOperationException($"Cannot refund escrow with status {escrow.Status}");
+            }
 
             // Refund via payment provider
             if (escrow.Payment?.PaymentIntentId != null)
             {
+                _logger.LogInformation("[RefundEscrow] Refunding payment. PaymentIntentId={PaymentIntentId}, Amount={Amount}", escrow.Payment.PaymentIntentId, escrow.AmountTotal);
                 await _paymentProvider.RefundAsync(escrow.Payment.PaymentIntentId, escrow.AmountTotal);
 
                 var payment = new Payment
@@ -172,15 +186,19 @@ namespace EscrowService.Application.Services
             var walletLogger = _loggerFactory.CreateLogger<WalletServiceClient>();
             var walletClient = new WalletServiceClient(httpClient, walletLogger);
 
+            _logger.LogInformation("[RefundEscrow] Releasing money to buyer wallet. BuyerId={BuyerId}, Amount={Amount}", escrow.BuyerId, escrow.AmountTotal);
             var refundResult = await walletClient.ReleaseMoneyAsync(escrow.BuyerId, escrow.AmountTotal);
             if (!refundResult)
+            {
+                _logger.LogError("[RefundEscrow] Failed to release money to buyer wallet. BuyerId={BuyerId}, Amount={Amount}", escrow.BuyerId, escrow.AmountTotal);
                 throw new InvalidOperationException("Không thể hoàn tiền vào ví người mua. Vui lòng thử lại.");
+            }
 
             escrow.Status = EscrowStatus.REFUNDED;
             escrow.AddEvent(EscrowEventType.REFUNDED, dto.Reason, userId);
 
             await _escrowRepo.UpdateAsync(escrow);
-            _logger.LogInformation("Refunded escrow {EscrowId} to buyer {BuyerId}", id, escrow.BuyerId);
+            _logger.LogInformation("[RefundEscrow] Refunded escrow {EscrowId} to buyer {BuyerId}", id, escrow.BuyerId);
 
             return MapToDto(escrow);
         }

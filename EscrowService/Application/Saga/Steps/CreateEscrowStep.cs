@@ -22,6 +22,7 @@ namespace EscrowService.Application.Saga.Steps
             {
                 var escrow = new Escrow
                 {
+                    OrderId = context.OrderId,
                     ProductId = context.ProductId,
                     BuyerId = context.BuyerId,
                     SellerId = context.SellerId,
