@@ -58,6 +58,7 @@ builder.Services.AddHttpClient<IOrderServiceClient, OrderServiceClient>(client =
 });
 
 // ===== DI - Application Services =====
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IEscrowAppService, EscrowAppService>();
 builder.Services.AddScoped<EscrowSagaOrchestrator>();
 
