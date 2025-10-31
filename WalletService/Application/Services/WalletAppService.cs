@@ -35,6 +35,16 @@ namespace WalletService.Application.Services
             return true;
         }
 
+        public async Task<bool> HoldAsync(string userId, decimal amount)
+        {
+            var wallet = await _walletRepo.GetByUserIdAsync(userId);
+            if (wallet == null || wallet.Balance < amount)
+                return false;
+            wallet.Balance -= amount;
+            await _walletRepo.UpdateAsync(wallet);
+            return true;
+        }
+
         public async Task<Wallet?> GetWalletByUserIdAsync(string userId)
         {
             return await _walletRepo.GetByUserIdAsync(userId);

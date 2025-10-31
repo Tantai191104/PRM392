@@ -109,5 +109,21 @@ namespace WalletService.Web.Controllers
 
             return Ok(new { message = "Release successful" });
         }
+
+        /// <summary>
+        /// Hold money in wallet (for escrow hold)
+        /// </summary>
+        [HttpPost("hold")]
+        public async Task<IActionResult> Hold([FromBody] HoldRequestDto dto)
+        {
+            if (dto == null || string.IsNullOrEmpty(dto.UserId) || dto.Amount <= 0)
+                return BadRequest(new { message = "Invalid hold data" });
+
+            var result = await _walletService.HoldAsync(dto.UserId, dto.Amount);
+            if (!result)
+                return BadRequest(new { message = "Hold failed" });
+
+            return Ok(new { message = "Hold successful" });
+        }
     }
 }

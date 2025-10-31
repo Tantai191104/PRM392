@@ -25,7 +25,7 @@ namespace EscrowService.Application.Services
         private readonly IPaymentRepository _paymentRepo;
         private readonly IPaymentProvider _paymentProvider;
         private readonly EscrowSagaOrchestrator _sagaOrchestrator;
-        private readonly IOrderServiceClient _orderServiceClient;
+        // Đã loại bỏ IOrderServiceClient, không còn sử dụng
         private readonly ILogger<EscrowAppService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILoggerFactory _loggerFactory;
@@ -35,7 +35,7 @@ namespace EscrowService.Application.Services
             IPaymentRepository paymentRepo,
             IPaymentProvider paymentProvider,
             EscrowSagaOrchestrator sagaOrchestrator,
-            IOrderServiceClient orderServiceClient,
+            // Đã loại bỏ IOrderServiceClient
             ILogger<EscrowAppService> logger,
             IHttpClientFactory httpClientFactory,
             ILoggerFactory loggerFactory)
@@ -44,7 +44,7 @@ namespace EscrowService.Application.Services
             _paymentRepo = paymentRepo;
             _paymentProvider = paymentProvider;
             _sagaOrchestrator = sagaOrchestrator;
-            _orderServiceClient = orderServiceClient;
+            // Đã loại bỏ _orderServiceClient
             _logger = logger;
             _httpClientFactory = httpClientFactory;
             _loggerFactory = loggerFactory;
@@ -109,13 +109,7 @@ namespace EscrowService.Application.Services
             if (escrow.Status != EscrowStatus.HOLDING)
                 throw new InvalidOperationException($"Cannot release escrow with status {escrow.Status}");
 
-            // Check order status
-            if (!string.IsNullOrEmpty(escrow.OrderId))
-            {
-                var orderStatus = await GetOrderStatusFromOrderServiceAsync(escrow.OrderId);
-                if (orderStatus != "Delivered")
-                    throw new InvalidOperationException($"Cannot release escrow: order {escrow.OrderId} status is {orderStatus}, must be Delivered.");
-            }
+            // Bỏ kiểm tra trạng thái đơn hàng từ OrderService
 
             // Transfer money via WalletService
             var httpClient = _httpClientFactory.CreateClient();
@@ -140,27 +134,13 @@ namespace EscrowService.Application.Services
 
             return MapToDto(escrow);
         }
-
-        private async Task<string> GetOrderStatusFromOrderServiceAsync(string orderId)
-        {
-            var status = await _orderServiceClient.GetOrderStatusAsync(orderId);
-            if (string.IsNullOrEmpty(status))
-                throw new InvalidOperationException($"Cannot get order status from OrderService for order {orderId}");
-            return status;
-        }
-
         public async Task<EscrowResponseDto> RefundEscrowAsync(string id, string userId, RefundEscrowDto dto)
         {
             var escrow = await _escrowRepo.GetByIdAsync(id);
             if (escrow == null)
                 throw new ArgumentException("Escrow not found");
 
-            if (!string.IsNullOrEmpty(escrow.OrderId))
-            {
-                var orderStatus = await GetOrderStatusFromOrderServiceAsync(escrow.OrderId);
-                if (orderStatus != "Returned")
-                    throw new InvalidOperationException($"Cannot refund escrow: order {escrow.OrderId} status is {orderStatus}, must be Returned.");
-            }
+            // Bỏ kiểm tra trạng thái đơn hàng từ OrderService
 
             if (escrow.BuyerId != userId)
                 throw new UnauthorizedAccessException("Only buyer can request refund");
@@ -224,5 +204,6 @@ namespace EscrowService.Application.Services
                 UpdatedAt = escrow.UpdatedAt
             };
         }
+
     }
 }

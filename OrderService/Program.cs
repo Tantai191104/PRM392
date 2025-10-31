@@ -108,6 +108,7 @@ builder.Services.AddFluentValidationClientsideAdapters();
 // ==============================
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderAppService, OrderAppService>();
+builder.Services.AddScoped<EscrowServiceClient>();
 
 // ==============================
 // 🌐 External HTTP Clients
@@ -135,6 +136,13 @@ builder.Services.AddHttpClient<WalletServiceClient>(client =>
     var walletServiceBaseUrl = builder.Configuration["ExternalServices:WalletService:BaseUrl"] ?? "http://walletservice:5150";
     client.BaseAddress = new Uri(walletServiceBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddHttpClient<OrderService.Infrastructure.ExternalServices.EscrowServiceClient>((sp, client) =>
+{
+     var config = sp.GetRequiredService<IConfiguration>();
+     var baseUrl = config["ExternalServices:EscrowService:BaseUrl"] ?? "http://escrowservice:5141";
+     client.BaseAddress = new Uri(baseUrl);
+     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 // ==============================

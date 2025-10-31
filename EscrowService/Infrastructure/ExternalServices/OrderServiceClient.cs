@@ -51,7 +51,7 @@ namespace EscrowService.Infrastructure.ExternalServices
         {
             try
             {
-                var response = await _httpClient.DeleteAsync($"/api/orders/{orderId}");
+                var response = await _httpClient.PostAsync($"/api/orders/{orderId}/cancel", null);
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)

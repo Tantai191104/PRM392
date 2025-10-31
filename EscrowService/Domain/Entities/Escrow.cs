@@ -6,10 +6,6 @@ namespace EscrowService.Domain.Entities
 {
     public class Escrow : BaseEntity
     {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public override string Id { get; set; } = ObjectId.GenerateNewId().ToString();
-
         [BsonElement("order_id")]
         [BsonRepresentation(BsonType.ObjectId)]
         public string? OrderId { get; set; }
