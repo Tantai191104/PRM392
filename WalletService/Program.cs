@@ -78,11 +78,13 @@ if (!string.IsNullOrEmpty(jwtSettings?.SecretKey))
 // ==============================
 // 🧩 Dependency Injection
 // ==============================
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<WalletRepository>();
 builder.Services.AddScoped<TransactionRepository>();
 builder.Services.AddScoped<WalletAppService>();
 builder.Services.AddScoped<TransactionService>();
-builder.Services.AddScoped<VNPayService>();
+builder.Services.AddScoped<IVnPayService, VNPayService>();
+
 
 // ==============================
 // 🩺 Health checks

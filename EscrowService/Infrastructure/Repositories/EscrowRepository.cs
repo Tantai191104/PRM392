@@ -11,7 +11,7 @@ namespace EscrowService.Infrastructure.Repositories
         Task<List<Escrow>> GetByBuyerIdAsync(string buyerId);
         Task<List<Escrow>> GetBySellerIdAsync(string sellerId);
         Task<Escrow> UpdateAsync(Escrow escrow);
-    Task<List<Escrow>> GetAllAsync(string? status = null, string? buyerId = null, string? sellerId = null, string? orderId = null);
+        Task<List<Escrow>> GetAllAsync(string? status = null, string? buyerId = null, string? sellerId = null, string? orderId = null);
     }
 
     public class EscrowRepository : IEscrowRepository

@@ -197,7 +197,7 @@ namespace OrderService.Application.Services
                         FromStatus = "None",
                         ToStatus = "Pending",
                         UpdatedById = buyerId,
-                        UpdatedBy = buyer.Name,
+                        UpdatedBy = buyer.Email,
                         UpdatedAt = DateTime.UtcNow
                     }
                 }

@@ -1,144 +1,74 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
-using System.Web;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
+using WalletService.Infrastructure.VNPayLibrary;
+using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
 using WalletService.Application.DTOs;
+using System;
 using System.Threading.Tasks;
 
 namespace WalletService.Infrastructure.VNPay
 {
-    public class VNPayService
+    public class VNPayService : IVnPayService
     {
-        private readonly IConfiguration _config;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<VNPayService> _logger;
-        private readonly HttpClient _http;
 
-        public VNPayService(IConfiguration config, ILogger<VNPayService> logger, HttpClient http)
+        public VNPayService(IConfiguration configuration, ILogger<VNPayService> logger)
         {
-            _config = config;
+            _configuration = configuration;
             _logger = logger;
-            _http = http;
         }
 
-        /// <summary>
-        /// Tạo URL thanh toán VNPay, tự động lấy ngrok public URL mới
-        /// </summary>
-        public async Task<VNPayResponseDTO> CreatePaymentUrlAsync(VNPayRequestDTO request)
+        public string CreatePaymentUrl(PaymentInformationModel model, HttpContext context)
         {
-            var vnp_Url = _config["VNPay:Url"];
-            var vnp_TmnCode = _config["VNPay:TmnCode"];
-            var vnp_HashSecret = _config["VNPay:HashSecret"];
-            var vnp_ReturnUrl = await GetNgrokUrlAsync(); // Lấy URL public mới từ ngrok
+            var timeZoneById = TimeZoneInfo.FindSystemTimeZoneById(_configuration["TimeZoneId"]);
+            var timeNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZoneById);
+            var tick = DateTime.Now.Ticks.ToString();
+            var vnPay = new WalletService.Infrastructure.VNPayLibrary.VNPayLibrary();
+            var urlCallBack = _configuration["PaymentCallBack:ReturnUrl"];
 
-            var vnp_Amount = request.Amount;
-            var vnp_TxnRef = Guid.NewGuid().ToString("N").Substring(0, 12);
-            var vnp_OrderInfo = "Nap tien test";
-            var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"); // Windows
-            var now = TimeZoneInfo.ConvertTime(DateTime.Now, vnTimeZone);
+            vnPay.AddRequestData("vnp_Version", _configuration["Vnpay:Version"]);
+            vnPay.AddRequestData("vnp_Command", _configuration["Vnpay:Command"]);
+            vnPay.AddRequestData("vnp_TmnCode", _configuration["Vnpay:TmnCode"]);
+            vnPay.AddRequestData("vnp_Amount", ((int)model.Amount * 100).ToString());
+            vnPay.AddRequestData("vnp_CreateDate", timeNow.ToString("yyyyMMddHHmmss"));
+            vnPay.AddRequestData("vnp_CurrCode", _configuration["Vnpay:CurrCode"]);
+            vnPay.AddRequestData("vnp_IpAddr", vnPay.GetIpAddress(context));
+            vnPay.AddRequestData("vnp_Locale", _configuration["Vnpay:Locale"]);
+            vnPay.AddRequestData("vnp_OrderInfo", $"Nap tien vao vi {model.Amount}");
+            vnPay.AddRequestData("vnp_OrderType", "140000");
+            vnPay.AddRequestData("vnp_ReturnUrl", urlCallBack);
+            vnPay.AddRequestData("vnp_TxnRef", tick);
 
-            var vnp_CreateDate = now.ToString("yyyyMMddHHmmss");
-            var vnp_ExpireDate = now.AddMinutes(15).ToString("yyyyMMddHHmmss");
-            var vnp_IpAddr = "127.0.0.1";
-            var vnp_BankCode = "VNPAYQR";
+            // Log the request data
+            var requestLog = string.Join("&", vnPay.GetType().GetField("_requestData", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .GetValue(vnPay) as SortedList<string, string>);
+            _logger?.LogInformation("VNPay Request Data: {data}", requestLog);
 
-            var inputData = new SortedDictionary<string, string>(StringComparer.Ordinal)
-            {
-                {"vnp_Version", "2.1.0"},
-                {"vnp_Command", "pay"},
-                {"vnp_TmnCode", vnp_TmnCode},
-                {"vnp_Amount", vnp_Amount.ToString()},
-                {"vnp_CurrCode", "VND"},
-                {"vnp_TxnRef", vnp_TxnRef},
-                {"vnp_OrderInfo", vnp_OrderInfo},
-                {"vnp_OrderType", "140000"},
-                {"vnp_BankCode", vnp_BankCode},
-                {"vnp_Locale", "vn"},
-                {"vnp_ReturnUrl", vnp_ReturnUrl},
-                {"vnp_IpAddr", vnp_IpAddr},
-                {"vnp_CreateDate", vnp_CreateDate},
-                {"vnp_ExpireDate", vnp_ExpireDate}
-            };
-
-            // Tạo signData
-            var signData = string.Join("&", inputData
-                            .Where(kv => !string.IsNullOrEmpty(kv.Value))
-                            .OrderBy(kv => kv.Key, StringComparer.Ordinal)
-                            .Select(kv => $"{kv.Key}={kv.Value}"));
-
-            var vnp_SecureHash = HmacSHA512(vnp_HashSecret, signData);
-
-            var query = string.Join("&", inputData.Select(kv => $"{kv.Key}={HttpUtility.UrlEncode(kv.Value)}"));
-            var paymentUrl = $"{vnp_Url}?{query}&vnp_SecureHash={vnp_SecureHash}";
-
-            _logger?.LogInformation("VNPay PaymentUrl: {paymentUrl}", paymentUrl);
-            _logger?.LogInformation("VNPay signData: {signData}", signData);
-
-            return new VNPayResponseDTO { PaymentUrl = paymentUrl };
+            var paymentUrl = vnPay.CreateRequestUrl(_configuration["Vnpay:BaseUrl"], _configuration["Vnpay:HashSecret"]);
+            _logger?.LogInformation("VNPay Payment URL: {url}", paymentUrl);
+            return paymentUrl;
         }
 
-        /// <summary>
-        /// Validate callback từ VNPay
-        /// </summary>
-        public bool ValidateCallback(Dictionary<string, string> callbackData)
+        public Task<string> CreatePaymentUrlAsync(PaymentInformationModel model, HttpContext context)
         {
-            if (!callbackData.TryGetValue("vnp_SecureHash", out var receivedHash) || string.IsNullOrEmpty(receivedHash))
-            {
-                _logger?.LogWarning("VNPay callback missing vnp_SecureHash.");
-                return false;
-            }
-
-            callbackData.Remove("vnp_SecureHash");
-            callbackData.Remove("vnp_SecureHashType");
-
-            var signData = string.Join("&", callbackData
-                                .Where(kv => !string.IsNullOrEmpty(kv.Value))
-                                .OrderBy(kv => kv.Key, StringComparer.Ordinal)
-                                .Select(kv => $"{kv.Key}={kv.Value}"));
-
-            var secret = _config["VNPay:HashSecret"];
-            var computedHash = HmacSHA512(secret, signData);
-
-            _logger?.LogInformation("VNPay ValidateCallback signData: {signData}", signData);
-            _logger?.LogInformation("VNPay computedHash: {computedHash}, receivedHash: {receivedHash}", computedHash, receivedHash);
-
-            return string.Equals(computedHash, receivedHash, StringComparison.OrdinalIgnoreCase);
+            // No actual async work, but matching controller signature
+            return Task.FromResult(CreatePaymentUrl(model, context));
         }
 
-        private string HmacSHA512(string key, string data)
+        public PaymentResponseModel PaymentExecute(IQueryCollection collections)
         {
-            using var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(key));
-            var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
-            return BitConverter.ToString(hash).Replace("-", "").ToLower();
+            var vnPay = new WalletService.Infrastructure.VNPayLibrary.VNPayLibrary();
+            var response = vnPay.GetFullResponseData(collections, _configuration["Vnpay:HashSecret"]);
+            return response;
         }
 
-        /// <summary>
-        /// Lấy URL public mới từ ngrok
-        /// </summary>
-        private async Task<string> GetNgrokUrlAsync()
+        public bool ValidateCallback(IQueryCollection callbackData)
         {
-            try
-            {
-                var response = await _http.GetStringAsync("http://127.0.0.1:4040/api/tunnels");
-                using var doc = JsonDocument.Parse(response);
-                var tunnels = doc.RootElement.GetProperty("tunnels");
-                foreach (var t in tunnels.EnumerateArray())
-                {
-                    if (t.GetProperty("proto").GetString() == "http")
-                        return t.GetProperty("public_url").GetString() + "/api/vnpay/callback";
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Lỗi lấy URL ngrok");
-            }
-
-            return _config["VNPay:ReturnUrl"]; // fallback
+            var response = PaymentExecute(callbackData);
+            return response.Success;
         }
     }
+
 }
