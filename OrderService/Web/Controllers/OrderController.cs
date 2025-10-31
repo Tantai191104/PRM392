@@ -223,8 +223,9 @@ namespace OrderService.Web.Controllers
         {
             return current switch
             {
-                OrderStatus.Pending => next is OrderStatus.Confirmed or OrderStatus.Cancelled,
-                OrderStatus.Confirmed => next is OrderStatus.Shipped or OrderStatus.Cancelled,
+                OrderStatus.Pending => next is OrderStatus.Confirmed or OrderStatus.Processing or OrderStatus.Cancelled,
+                OrderStatus.Confirmed => next is OrderStatus.Processing or OrderStatus.Shipped or OrderStatus.Cancelled,
+                OrderStatus.Processing => next is OrderStatus.Shipped or OrderStatus.Cancelled,
                 OrderStatus.Shipped => next is OrderStatus.Delivered or OrderStatus.Cancelled,
                 OrderStatus.Delivered => false, // Không thể thay đổi sau khi delivered
                 OrderStatus.Cancelled => false, // Không thể thay đổi sau khi cancelled
