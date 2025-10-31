@@ -20,7 +20,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-// Add Authentication & Authorization
+// -------------------------
+// Authentication & Authorization
+// -------------------------
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -40,16 +43,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         }
     });
 
-// Add Authorization DI
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(); // DI for Authorize attribute
 
+// -------------------------
 // Swagger with JWT support
+// -------------------------
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "WalletService API", Version = "v1" });
 
-    // Add JWT bearer support in Swagger
+    // JWT Bearer support in Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -118,7 +123,10 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers().RequireAuthorization(); // Áp dụng Authorize cho tất cả controller
+// Map controllers without global authorization
+app.MapControllers();
+
+// Map health checks
 app.MapHealthChecks("/health");
 
 app.Run();
