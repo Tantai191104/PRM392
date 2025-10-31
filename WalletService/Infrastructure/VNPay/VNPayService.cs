@@ -41,10 +41,16 @@ namespace WalletService.Infrastructure.VNPay
             vnPay.AddRequestData("vnp_ReturnUrl", urlCallBack);
             vnPay.AddRequestData("vnp_TxnRef", tick);
 
-            // Log the request data
-            var requestLog = string.Join("&", vnPay.GetType().GetField("_requestData", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                .GetValue(vnPay) as SortedList<string, string>);
-            _logger?.LogInformation("VNPay Request Data: {data}", requestLog);
+            // Log each key-value pair in request data for easier debugging
+            var requestData = vnPay.GetType().GetField("_requestData", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .GetValue(vnPay) as SortedList<string, string>;
+            if (requestData != null)
+            {
+                foreach (var kvp in requestData)
+                {
+                    _logger?.LogInformation($"VNPay Request Field: {kvp.Key} = {kvp.Value}");
+                }
+            }
 
             var paymentUrl = vnPay.CreateRequestUrl(_configuration["Vnpay:BaseUrl"], _configuration["Vnpay:HashSecret"]);
             _logger?.LogInformation("VNPay Payment URL: {url}", paymentUrl);
@@ -61,6 +67,16 @@ namespace WalletService.Infrastructure.VNPay
         {
             var vnPay = new WalletService.Infrastructure.VNPayLibrary.VNPayLibrary();
             var response = vnPay.GetFullResponseData(collections, _configuration["Vnpay:HashSecret"]);
+
+            // Log all callback data received from VNPay
+            foreach (var key in collections.Keys)
+            {
+                var value = collections[key];
+                _logger?.LogInformation($"VNPay Callback Field: {key} = {value}");
+            }
+
+            // Log the parsed response object
+            _logger?.LogInformation("VNPay Parsed Response: {@response}", response);
             return response;
         }
 
