@@ -39,6 +39,9 @@ services:
       ASPNETCORE_URLS: http://+:5150
       MongoDbSettings__ConnectionString: mongodb+srv://tantai231204:tantai191104@cluster0.nlp7smo.mongodb.net/?appName=Cluster0
       MongoDbSettings__DatabaseName: PRM392WalletDB
+      JwtSettings__SecretKey: VGhpc0lzQVNlY3JldEtleU11c3RCZVN0cmluZ0ZvckpXVFNpZ25pbmcxMjM0
+      JwtSettings__Issuer: PRM392AuthService
+      JwtSettings__Audience: PRM392Clients
     ports:
       - "5150:5150"
     networks:

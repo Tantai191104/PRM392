@@ -32,6 +32,7 @@ namespace EscrowService.Application.Services
         private readonly ILogger<EscrowAppService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILoggerFactory _loggerFactory;
+        private readonly Microsoft.AspNetCore.Http.IHttpContextAccessor _httpContextAccessor;
 
         public EscrowAppService(
             IEscrowRepository escrowRepo,
@@ -41,7 +42,8 @@ namespace EscrowService.Application.Services
             // Đã loại bỏ IOrderServiceClient
             ILogger<EscrowAppService> logger,
             IHttpClientFactory httpClientFactory,
-            ILoggerFactory loggerFactory)
+            ILoggerFactory loggerFactory,
+            Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor)
         {
             _escrowRepo = escrowRepo;
             _paymentRepo = paymentRepo;
@@ -50,6 +52,7 @@ namespace EscrowService.Application.Services
             _logger = logger;
             _httpClientFactory = httpClientFactory;
             _loggerFactory = loggerFactory;
+            _httpContextAccessor = httpContextAccessor;
         }
         public async Task<List<EscrowResponseDto>> GetAllEscrowsAsync(EscrowFilterDto filters)
         {
@@ -83,6 +86,7 @@ namespace EscrowService.Application.Services
             if (escrow == null)
                 throw new InvalidOperationException("Escrow was created but not found");
 
+            // Trả về toàn bộ thông tin escrow
             return MapToDto(escrow);
         }
 
@@ -218,7 +222,7 @@ namespace EscrowService.Application.Services
 
         private EscrowResponseDto MapToDto(Escrow escrow)
         {
-            return new EscrowResponseDto
+            var dto = new EscrowResponseDto
             {
                 Id = escrow.Id,
                 OrderId = escrow.OrderId,
@@ -234,6 +238,31 @@ namespace EscrowService.Application.Services
                 CreatedAt = escrow.CreatedAt,
                 UpdatedAt = escrow.UpdatedAt
             };
+
+            // Gọi external service lấy thông tin order nếu có OrderId
+            if (!string.IsNullOrEmpty(escrow.OrderId))
+            {
+                try
+                {
+                    var httpClient = _httpClientFactory.CreateClient();
+                    // Lấy token từ HttpContext
+                    var token = _httpContextAccessor?.HttpContext?.Request?.Headers["Authorization"].ToString();
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        if (token.StartsWith("Bearer "))
+                            token = token.Substring(7);
+                        httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                    }
+                    var response = httpClient.GetAsync($"http://orderservice:5139/api/orders/{escrow.OrderId}").Result;
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var json = response.Content.ReadAsStringAsync().Result;
+                        dto.Order = System.Text.Json.JsonSerializer.Deserialize<object>(json);
+                    }
+                }
+                catch { /* ignore errors, keep Order null */ }
+            }
+            return dto;
         }
 
     }
