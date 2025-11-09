@@ -18,8 +18,11 @@ builder.Configuration
 var mongoSettings = builder.Configuration.GetSection("MongoSettings");
 var client = new MongoClient(mongoSettings["ConnectionString"]);
 var dbName = mongoSettings["DatabaseName"]!;
+var database = client.GetDatabase(dbName);
 
 // ===== DI =====
+builder.Services.AddSingleton<IMongoClient>(client);
+builder.Services.AddSingleton<IMongoDatabase>(database);
 builder.Services.AddSingleton(new ProductRepository(client, dbName));
 builder.Services.AddSingleton<ProductAppService>();
 

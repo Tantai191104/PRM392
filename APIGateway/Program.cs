@@ -2,14 +2,38 @@ using Microsoft.OpenApi.Models;
 using System.IO;
 using Microsoft.AspNetCore.DataProtection;
 using System.Collections.Concurrent;
+using APIGateway.Services;
+using APIGateway.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// =============================
+// REDIS CACHE
+// =============================
+var redisConnection = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = redisConnection;
+    options.InstanceName = builder.Configuration["Redis:InstanceName"] ?? "PRM392:";
+});
+
+// =============================
+// CACHE SERVICE
+// =============================
+builder.Services.AddSingleton<CacheService>();
 
 // =============================
 // YARP Reverse Proxy
 // =============================
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+
+// =============================
+// Dashboard Service
+// =============================
+builder.Services.AddHttpClient<DashboardService>();
+builder.Services.AddScoped<DashboardService>();
+builder.Services.AddControllers();
 
 // =============================
 // Swagger / OpenAPI
@@ -72,6 +96,9 @@ var forwardAll = config.GetValue<bool?>("Gateway:ForwardAllHeaders") ?? false;
 app.UseRouting();
 app.UseCors("GatewayCors");
 
+// Map controllers for Dashboard API
+app.MapControllers();
+
 // ---- Rate limiting per IP ----
 var rateLimitWindow = TimeSpan.FromMinutes(1);
 var rateLimitMaxRequests = 100;
@@ -104,6 +131,20 @@ app.Use(async (context, next) =>
 });
 
 // =============================
+// RATE LIMITING MIDDLEWARE
+// =============================
+var enableRateLimiting = builder.Configuration.GetValue<bool>("RateLimit:EnableRateLimiting", true);
+if (enableRateLimiting)
+{
+    app.UseMiddleware<RateLimitingMiddleware>();
+    app.Logger.LogInformation("Rate limiting is ENABLED");
+}
+else
+{
+    app.Logger.LogInformation("Rate limiting is DISABLED");
+}
+
+// =============================
 // Swagger UI
 // =============================
 app.UseSwagger();
@@ -113,6 +154,9 @@ app.UseSwaggerUI(c =>
     c.DisplayRequestDuration();
     c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.List);
     c.DefaultModelsExpandDepth(-1);
+
+    // APIGateway's own Dashboard API (MUST BE FIRST)
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "API Gateway - Dashboard");
 
     // Các service downstream hiển thị trong UI
     var downstreamList = downstream

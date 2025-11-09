@@ -28,13 +28,16 @@ namespace WalletService.Application.Services
 
         // ===================== CREATE ORDER =====================
         public async Task<(bool Success, string Error, string AppTransId, string OrderUrl)> CreateOrderAsync(
-            long amount, string description, string callbackUrl, string userId)
+            long amount, string description, string callbackUrl, string userId, string redirectUrl = null)
         {
             string appTransId = $"{DateTime.Now:yyMMdd_HHmmssfff}_{new Random().Next(1000, 9999)}";
             string appUser = userId;
             long appTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-            var embedData = JsonConvert.SerializeObject(new { });
+            var embedData = JsonConvert.SerializeObject(new 
+            { 
+                redirecturl = redirectUrl ?? "" 
+            });
             var items = JsonConvert.SerializeObject(new { });
 
             string data = $"{appId}|{appTransId}|{appUser}|{amount}|{appTime}|{embedData}|{items}";
@@ -80,73 +83,89 @@ namespace WalletService.Application.Services
         // ===================== QUERY ORDER STATUS =====================
         public async Task<Dictionary<string, object>> QueryOrderStatusAsync(string appTransId)
         {
+            string data = $"{appId}|{appTransId}|{key1}";
+            string mac = ComputeHmacSHA256(data, key1);
+
             var param = new Dictionary<string, string>
             {
                 { "appid", appId },
-                { "apptransid", appTransId }
+                { "apptransid", appTransId },
+                { "mac", mac }
             };
 
-            string data = $"{appId}|{appTransId}|{key1}";
-            param.Add("mac", ComputeHmacSHA256(data, key1));
-
-            using var client = new HttpClient();
-            var content = new FormUrlEncodedContent(param);
-            var response = await client.PostAsync(queryOrderUrl, content);
-            response.EnsureSuccessStatusCode();
-            var responseString = await response.Content.ReadAsStringAsync();
-
-            var outer = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseString)!;
-
-            if (outer.TryGetValue("data", out var dataObj) && dataObj is string dataStr)
+            try
             {
-                try
-                {
-                    var inner = JsonConvert.DeserializeObject<Dictionary<string, object>>(dataStr);
-                    if (inner != null) return inner;
-                }
-                catch (JsonException)
-                {
-                    Console.WriteLine("[QueryOrderStatusAsync] Failed to parse inner data JSON: " + dataStr);
-                }
-            }
+                using var client = new HttpClient();
+                var content = new FormUrlEncodedContent(param);
+                var response = await client.PostAsync(queryOrderUrl, content);
+                var responseString = await response.Content.ReadAsStringAsync();
 
-            return outer;
+                Console.WriteLine($"[QueryOrderStatus] Response: {responseString}");
+
+                var result = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseString)!;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[QueryOrderStatus] Error: {ex.Message}");
+                return new Dictionary<string, object> 
+                { 
+                    { "returncode", -1 }, 
+                    { "returnmessage", ex.Message } 
+                };
+            }
         }
 
         // ===================== CHECK & CREDIT ORDER =====================
-        public async Task<bool> CheckAndCreditOrderAsync(string appTransId, string userId)
+        public async Task<(bool Success, string Message, long Amount)> CheckAndCreditOrderAsync(string appTransId, string userId)
         {
             var status = await QueryOrderStatusAsync(appTransId);
 
-            if (status.TryGetValue("returncode", out var rcObj) && Convert.ToInt32(rcObj) == 1 &&
-                status.TryGetValue("transstatus", out var tsObj) && Convert.ToInt32(tsObj) == 1)
+            // Check if query was successful
+            if (!status.TryGetValue("returncode", out var rcObj) || Convert.ToInt32(rcObj) != 1)
             {
-                long amount = status.TryGetValue("amount", out var amtObj) ? Convert.ToInt64(amtObj) : 0;
-                if (amount > 0)
-                {
-                    // Cộng tiền vào ví user
-                    var wallet = await _walletAppService.GetWalletByUserIdAsync(userId);
-                    if (wallet != null)
-                    {
-                        wallet.Balance += amount;
-                        await _walletAppService.UpdateWalletAsync(wallet);
-
-                        // Tạo transaction record
-                        var transaction = new Transaction
-                        {
-                            Id = Guid.NewGuid().ToString(),
-                            WalletId = wallet.Id,
-                            Amount = amount,
-                            Type = "Deposit",
-                            Description = $"ZaloPay deposit: {appTransId}",
-                            CreatedAt = DateTime.UtcNow
-                        };
-                        await _transactionService.CreateTransactionAsync(transaction);
-                        return true;
-                    }
-                }
+                string message = status.TryGetValue("returnmessage", out var msgObj) 
+                    ? msgObj.ToString() ?? "Query failed" 
+                    : "Query failed";
+                return (false, message, 0);
             }
-            return false;
+
+            // Check transaction status (1 = success, 2 = failed, 3 = pending)
+            if (!status.TryGetValue("zptransid", out var zpTransIdObj))
+            {
+                return (false, "Transaction not found or still pending", 0);
+            }
+
+            // Get amount
+            long amount = status.TryGetValue("amount", out var amtObj) ? Convert.ToInt64(amtObj) : 0;
+            if (amount <= 0)
+            {
+                return (false, "Invalid amount", 0);
+            }
+
+            // Credit wallet
+            var wallet = await _walletAppService.GetWalletByUserIdAsync(userId);
+            if (wallet == null)
+            {
+                return (false, "Wallet not found", 0);
+            }
+
+            wallet.Balance += amount;
+            await _walletAppService.UpdateWalletAsync(wallet);
+
+            // Create transaction record
+            var transaction = new Transaction
+            {
+                Id = Guid.NewGuid().ToString(),
+                WalletId = wallet.Id,
+                Amount = amount,
+                Type = "Deposit",
+                Description = $"ZaloPay deposit: {appTransId}",
+                CreatedAt = DateTime.UtcNow
+            };
+            await _transactionService.CreateTransactionAsync(transaction);
+
+            return (true, "Payment successful", amount);
         }
 
         // ===================== HMAC HELPER =====================

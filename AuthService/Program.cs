@@ -12,9 +12,12 @@ var builder = WebApplication.CreateBuilder(args);
 var mongoSettings = builder.Configuration.GetSection("MongoSettings");
 var client = new MongoClient(mongoSettings["ConnectionString"]);
 string dbName = mongoSettings["DatabaseName"]!;
+var database = client.GetDatabase(dbName);
 
 // ===== DI =====
 
+builder.Services.AddSingleton<IMongoClient>(client);
+builder.Services.AddSingleton<IMongoDatabase>(database);
 builder.Services.AddSingleton(new UserRepository(client, dbName));
 builder.Services.AddSingleton<JwtService>();
 

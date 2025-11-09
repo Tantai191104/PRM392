@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using WalletService.Domain.Entities;
 using MongoDB.Driver;
@@ -22,6 +23,11 @@ namespace WalletService.Infrastructure.Repositories
         public async Task UpdateAsync(Wallet wallet)
         {
             await _wallets.ReplaceOneAsync(w => w.Id == wallet.Id, wallet);
+        }
+
+        public async Task<List<Wallet>> GetAllAsync()
+        {
+            return await _wallets.Find(_ => true).ToListAsync();
         }
     }
 }

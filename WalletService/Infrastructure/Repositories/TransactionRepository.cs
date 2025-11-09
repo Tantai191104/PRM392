@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using WalletService.Domain.Entities;
@@ -19,6 +20,18 @@ namespace WalletService.Infrastructure.Repositories
         public async Task CreateAsync(Transaction transaction)
         {
             await _transactions.InsertOneAsync(transaction);
+        }
+
+        public async Task<List<Transaction>> GetAllAsync()
+        {
+            return await _transactions.Find(_ => true).ToListAsync();
+        }
+
+        public async Task<List<Transaction>> GetByDateRangeAsync(DateTime startDate, DateTime endDate)
+        {
+            return await _transactions
+                .Find(t => t.CreatedAt >= startDate && t.CreatedAt <= endDate)
+                .ToListAsync();
         }
     }
 }

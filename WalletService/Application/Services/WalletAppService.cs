@@ -1,6 +1,7 @@
 using WalletService.Domain.Entities;
 using WalletService.Infrastructure.Repositories;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace WalletService.Application.Services
 {
@@ -58,6 +59,11 @@ namespace WalletService.Application.Services
         public async Task UpdateWalletAsync(Wallet wallet)
         {
             await _walletRepo.UpdateAsync(wallet);
+        }
+
+        public async Task<List<Wallet>> GetAllWalletsAsync()
+        {
+            return await _walletRepo.GetAllAsync();
         }
     }
 }
