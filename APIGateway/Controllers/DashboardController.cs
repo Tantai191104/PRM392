@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace APIGateway.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/dashboard")]
     public class DashboardController : ControllerBase
     {
         private readonly DashboardService _dashboardService;
