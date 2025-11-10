@@ -34,20 +34,26 @@ namespace WalletService.Web.Controllers
         {
             public long Amount { get; set; }
             public string Description { get; set; } = string.Empty;
-            public string UserId { get; set; } = string.Empty;
             public string? RedirectUrl { get; set; }  // URL để redirect về sau khi thanh toán
         }
 
         // ===================== CREATE ORDER =====================
         [HttpPost("create-order")]
-        [AllowAnonymous]
+        [Authorize]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto dto)
         {
-            if (dto.Amount <= 0 || string.IsNullOrWhiteSpace(dto.Description) || string.IsNullOrWhiteSpace(dto.UserId))
-                return BadRequest(new { success = false, message = "Amount, Description and UserId are required" });
+            // Lấy userId từ JWT token
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "sub" || c.Type == "userId" || c.Type == System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+                return Unauthorized(new { success = false, message = "User not authenticated" });
+            
+            string userId = userIdClaim.Value;
+
+            if (dto.Amount <= 0 || string.IsNullOrWhiteSpace(dto.Description))
+                return BadRequest(new { success = false, message = "Amount and Description are required" });
 
             // Validate wallet exists
-            var wallet = await _walletAppService.GetWalletByUserIdAsync(dto.UserId);
+            var wallet = await _walletAppService.GetWalletByUserIdAsync(userId);
             if (wallet == null)
             {
                 return BadRequest(new { success = false, message = "Wallet not found for user" });
@@ -64,7 +70,7 @@ namespace WalletService.Web.Controllers
                 dto.Amount, 
                 dto.Description, 
                 callbackUrl, 
-                dto.UserId,
+                userId,
                 redirectUrl
             );
 
@@ -193,57 +199,21 @@ namespace WalletService.Web.Controllers
             return Ok(result);
         }
 
-        // ===================== CHECK ORDER STATUS =====================
-        [HttpGet("check-status/{appTransId}")]
-        [AllowAnonymous]
-        public async Task<IActionResult> CheckStatus(string appTransId)
-        {
-            if (string.IsNullOrWhiteSpace(appTransId))
-                return BadRequest(new { success = false, message = "appTransId is required" });
-
-            var status = await _zalopayService.QueryOrderStatusAsync(appTransId);
-            return Ok(new { success = true, data = status });
-        }
-
-        // ===================== VERIFY & CREDIT ORDER =====================
-        [HttpPost("verify-and-credit")]
-        [AllowAnonymous]
-        public async Task<IActionResult> VerifyAndCredit([FromBody] VerifyOrderDto dto)
-        {
-            if (string.IsNullOrWhiteSpace(dto.AppTransId) || string.IsNullOrWhiteSpace(dto.UserId))
-                return BadRequest(new { success = false, message = "AppTransId and UserId are required" });
-
-            var (success, message, amount) = await _zalopayService.CheckAndCreditOrderAsync(dto.AppTransId, dto.UserId);
-
-            if (success)
-            {
-                var wallet = await _walletAppService.GetWalletByUserIdAsync(dto.UserId);
-                return Ok(new
-                {
-                    success = true,
-                    message = message,
-                    data = new
-                    {
-                        AppTransId = dto.AppTransId,
-                        Amount = amount,
-                        WalletBalance = wallet?.Balance ?? 0
-                    }
-                });
-            }
-            else
-            {
-                return BadRequest(new { success = false, message = message });
-            }
-        }
-
-        // ===================== CHECK PAYMENT & AUTO CREDIT =====================
-        // Frontend gọi endpoint này sau khi user thanh toán để tự động check và cộng tiền
+        // ===================== CHECK PAYMENT STATUS =====================
+        // Frontend gọi endpoint này sau khi user thanh toán để check trạng thái
         [HttpPost("check-payment")]
-        [AllowAnonymous]
-        public async Task<IActionResult> CheckPayment([FromBody] VerifyOrderDto dto)
+        [Authorize]
+        public async Task<IActionResult> CheckPayment([FromBody] CheckPaymentDto dto)
         {
-            if (string.IsNullOrWhiteSpace(dto.AppTransId) || string.IsNullOrWhiteSpace(dto.UserId))
-                return BadRequest(new { success = false, message = "AppTransId and UserId are required" });
+            // Lấy userId từ JWT token
+            var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "sub" || c.Type == "userId" || c.Type == System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+                return Unauthorized(new { success = false, message = "User not authenticated" });
+            
+            string userId = userIdClaim.Value;
+
+            if (string.IsNullOrWhiteSpace(dto.AppTransId))
+                return BadRequest(new { success = false, message = "AppTransId is required" });
 
             // Check status từ ZaloPay
             var status = await _zalopayService.QueryOrderStatusAsync(dto.AppTransId);
@@ -275,7 +245,7 @@ namespace WalletService.Web.Controllers
             }
 
             // Đã thanh toán → Check xem đã cộng tiền chưa
-            var wallet = await _walletAppService.GetWalletByUserIdAsync(dto.UserId);
+            var wallet = await _walletAppService.GetWalletByUserIdAsync(userId);
             if (wallet == null)
             {
                 return BadRequest(new { success = false, message = "Wallet not found" });
@@ -298,11 +268,11 @@ namespace WalletService.Web.Controllers
             }
 
             // Chưa cộng tiền → Cộng tiền ngay
-            var (success, message, amount) = await _zalopayService.CheckAndCreditOrderAsync(dto.AppTransId, dto.UserId);
+            var (success, message, amount) = await _zalopayService.CheckAndCreditOrderAsync(dto.AppTransId, userId);
 
             if (success)
             {
-                wallet = await _walletAppService.GetWalletByUserIdAsync(dto.UserId);
+                wallet = await _walletAppService.GetWalletByUserIdAsync(userId);
                 return Ok(new
                 {
                     success = true,
@@ -325,10 +295,9 @@ namespace WalletService.Web.Controllers
             }
         }
 
-        public class VerifyOrderDto
+        public class CheckPaymentDto
         {
             public string AppTransId { get; set; } = string.Empty;
-            public string UserId { get; set; } = string.Empty;
         }
     }
 }
